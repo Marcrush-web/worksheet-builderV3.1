@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>สร้างสื่อใบงานด้วย AI (Prompt Builder)</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#4f46e5;--pg:linear-gradient(135deg,#4f46e5 0%,#8b5cf6 50%,#ec4899 100%);
+  --bg:#f1f5f9;--sur:#fff;--txt:#1e293b;--mu:#475569;--bd:#cbd5e1;--ok:#10b981;
+  --hh:72px;--sw:430px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Sarabun',sans-serif;color:var(--txt);height:100vh;overflow:hidden;background:#0f172a;position:relative;}
+
+/* ── ANIMATED BACKGROUND ── */
+.bg-wrap{position:fixed;inset:0;z-index:0;background:linear-gradient(135deg,#4f46e5,#8b5cf6,#ec4899);background-size:200% 200%;animation:gradientMove 12s ease infinite;}
+@keyframes gradientMove{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.bg-overlay{position:fixed;inset:0;z-index:1;background:rgba(15,23,42,0.6);}
+
+/* ── HEADER ── */
+.hdr{height:var(--hh);position:relative;z-index:200;background:linear-gradient(135deg,#0f172a,#1e3a8a,#0f172a);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;padding:0 1.25rem;box-shadow:0 4px 24px rgba(0,0,0,0.3);}
+.brand{display:flex;align-items:center;gap:14px;flex:1;}
+
+/* ── ANIMATED LOGO ── */
+.logo-wrap{position:relative;width:52px;height:52px;flex-shrink:0;}
+.logo-ring1{position:absolute;inset:-5px;border-radius:18px;background:conic-gradient(from 0deg,#4f46e5,#8b5cf6,#ec4899,#f59e0b,#4f46e5);animation:spinRing1 4s linear infinite;opacity:0.85;}
+.logo-ring2{position:absolute;inset:-9px;border-radius:22px;background:conic-gradient(from 180deg,#ec4899,#4f46e5,#8b5cf6,#10b981,#ec4899);animation:spinRing2 6s linear infinite;opacity:0.45;filter:blur(2px);}
+.logo-glow{position:absolute;inset:-14px;border-radius:26px;background:radial-gradient(circle,rgba(79,70,229,0.6) 0%,transparent 70%);animation:glowPulse 2.5s ease-in-out infinite;}
+.logo-spark{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff;animation:sparkFloat 3s ease-in-out infinite;}
+.logo-spark:nth-child(1){top:-14px;left:50%;animation-delay:0s;background:#a78bfa;}
+.logo-spark:nth-child(2){top:50%;right:-14px;animation-delay:0.75s;background:#ec4899;}
+.logo-spark:nth-child(3){bottom:-14px;left:50%;animation-delay:1.5s;background:#34d399;}
+.logo-spark:nth-child(4){top:50%;left:-14px;animation-delay:2.25s;background:#fbbf24;}
+@keyframes spinRing1{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes spinRing2{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
+@keyframes glowPulse{0%,100%{opacity:0.4;transform:scale(0.95);}50%{opacity:0.75;transform:scale(1.05);}}
+@keyframes sparkFloat{0%,100%{opacity:0;transform:scale(0.5) translateY(0);}50%{opacity:1;transform:scale(1) translateY(-3px);}}
+.logo-img{position:relative;z-index:2;width:52px;height:52px;border-radius:14px;object-fit:cover;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,0.9),0 4px 16px rgba(0,0,0,0.4);animation:logoBounce 3s ease-in-out infinite;}
+@keyframes logoBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+
+.bt{font-size:19px;font-weight:700;color:#f1f5f9;letter-spacing:-0.3px;text-shadow:0 2px 8px rgba(0,0,0,0.5);line-height:1.2;}
+.bs{font-size:13px;font-weight:600;color:#a5b4fc;text-shadow:0 1px 4px rgba(0,0,0,0.4);}
+.brst{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#e2e8f0;cursor:pointer;font-family:inherit;transition:all .2s;backdrop-filter:blur(8px);}
+.brst:hover{background:rgba(255,255,255,0.2);color:#fff;transform:translateY(-1px);}
+
+/* ── LAYOUT ── */
+.lay{display:flex;height:calc(100vh - var(--hh));padding:14px;gap:14px;position:relative;z-index:10;overflow:hidden;}
+.sb{width:var(--sw);background:rgba(255,255,255,0.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:14px;border:1px solid rgba(255,255,255,0.7);box-shadow:0 8px 32px rgba(0,0,0,0.18);overflow-y:auto;flex-shrink:0;}
+.sb::-webkit-scrollbar{width:4px}
+.sb::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px}
+.sbi{padding:1rem 1.1rem;display:flex;flex-direction:column;gap:6px}
+
+/* ── STEPS ── */
+.sk{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;transition:all .2s;margin-bottom:4px;background:#fff;}
+.sk.active{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.sk.done{border-color:#86efac;background:#f0fdf4}
+.sk.locked{opacity:.45;pointer-events:none}
+.sh{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;user-select:none}
+.sh:hover{background:#f8fafc}
+.sk.done .sh:hover{background:#dcfce7}
+/* FIX: done steps คลิกได้ */
+.sk.done{cursor:pointer;}
+.sn{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:#f1f5f9;color:#64748b;border:1.5px solid #e2e8f0;transition:all .2s}
+.sk.active .sn{background:var(--primary);color:#fff;border-color:var(--primary)}
+.sk.done .sn{background:var(--ok);color:#fff;border-color:var(--ok)}
+.stw{flex:1}
+.stt{font-size:13px;font-weight:700;color:#1e293b}
+.stss{font-size:11px;color:#64748b;margin-top:1px}
+.sk.done .stss{color:#16a34a}
+.sic{font-size:12px;color:#94a3b8;transition:transform .2s}
+.sk.active .sic{transform:rotate(90deg);color:var(--primary)}
+.sbody{display:none;padding:0 12px 12px}
+.sk.active .sbody{display:block}
+
+/* ── FIELDS ── */
+.f{margin-bottom:10px}.f:last-child{margin-bottom:0}
+.fl{display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.fh{font-size:11px;color:#64748b;margin-top:3px;line-height:1.5}
+select,input[type=text],input[type=number],textarea{width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;background:#f8fafc;color:#1e293b;appearance:none;transition:border-color .15s,box-shadow .15s;}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.12);background:#fff}
+textarea{resize:vertical;min-height:65px;line-height:1.6}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* ── SUBJECT GRID ── */
+.srow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sc{padding:9px 10px;border-radius:9px;border:1.5px solid #e2e8f0;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;background:#fff;display:flex;align-items:center;gap:6px;transition:all .15s;color:#475569}
+.sc .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sc.on{color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.2)}
+.sc:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+
+/* ── WS TYPE CARDS ── */
+.wsgrid{display:flex;flex-direction:column;gap:5px}
+.wsc{border:1.5px solid #e2e8f0;border-radius:9px;padding:9px 11px;cursor:pointer;transition:all .15s;background:#fff}
+.wsc:hover{border-color:var(--primary);background:#f8f9ff}
+.wsc.on{border-color:var(--primary);background:#eef2ff}
+.wsc-top{display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.wsc-icon{font-size:14px}.wsc-name{font-size:13px;font-weight:700;flex:1;color:#1e293b}
+.wsc-tag{font-size:9px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-weight:600}
+.wsc.on .wsc-tag{background:var(--primary);color:#fff}
+.wsc-desc{font-size:11px;color:#64748b;line-height:1.4}
+.wsc.on .wsc-desc{color:#6366f1}
+
+/* ── THEME GRID ── */
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.tc{border:1.5px solid #e2e8f0;border-radius:9px;padding:9px 9px;cursor:pointer;transition:all .15s;background:#fff;text-align:center}
+.tc:hover{border-color:var(--primary);transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,70,229,.15)}
+.tc.on{border-color:var(--primary);background:#eef2ff}
+.tc .ti{font-size:22px;margin-bottom:3px}
+.tc .tn{font-size:11px;font-weight:700;color:#1e293b;line-height:1.3}
+.tc .td{font-size:10px;color:#64748b;margin-top:1px}
+.tc.on .tn{color:var(--primary)}
+
+/* ── AUTO BTN ── */
+.abtn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;border-radius:9px;background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:inherit;box-shadow:0 3px 10px rgba(239,68,68,.35);transition:all .2s;margin-top:4px}
+.abtn:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(239,68,68,.45)}
+
+/* ── INFO BOXES ── */
+.cbox{background:#f0fdf4;border:1px solid #86efac;border-radius:9px;padding:9px 11px;font-size:11.5px;color:#15803d;line-height:1.7}
+.cbox strong{color:#166534}
+.ubox{background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px 11px;margin-bottom:8px;}
+.ubh{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+
+/* ── VALIDATE ERROR ── */
+.err-box{background:#fef2f2;border:1px solid #fca5a5;border-radius:9px;padding:10px 12px;font-size:12px;color:#dc2626;margin-bottom:8px;display:none;line-height:1.6;}
+.err-box.show{display:block;}
+
+/* ── NAV ── */
+.snav{display:flex;gap:6px;margin-top:10px}
+.bp,.bn{flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s}
+.bp{background:transparent;border:1.5px solid #e2e8f0;color:#475569}
+.bp:hover{background:#f1f5f9;border-color:#cbd5e1}
+.bn{background:var(--primary);color:#fff;border:none;box-shadow:0 3px 10px rgba(79,70,229,.35)}
+.bn:hover{background:#4338ca;box-shadow:0 4px 14px rgba(79,70,229,.45)}
+
+/* ── GENERATE ── */
+.gbtn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:12px;border-radius:10px;background:var(--pg);color:#fff;font-size:13px;font-weight:700;font-family:inherit;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(79,70,229,.4);transition:all .2s;margin-top:4px}
+.gbtn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(79,70,229,.55)}
+
+/* ── SUMMARY BOX ── */
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
+.sum-item{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;}
+.sum-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+.sum-val{font-size:12px;font-weight:700;color:#1e293b;line-height:1.3;}
+.sum-item.highlight{border-color:var(--primary);background:#eef2ff;}
+.sum-item.highlight .sum-val{color:var(--primary);}
+
+/* ── OUTPUT PANEL ── */
+.out{flex:1;background:rgba(10,15,30,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:14px;border:1px solid rgba(255,255,255,0.12);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.35);min-width:0;}
+.oh{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.odo{width:7px;height:7px;border-radius:50%;background:#818cf8;animation:p2 2s ease-in-out infinite}
+@keyframes p2{0%,100%{opacity:1;box-shadow:0 0 6px #818cf8}50%{opacity:.3;box-shadow:none}}
+.ott{font-size:13px;font-weight:700;color:#e2e8f0;margin-left:7px}
+.ost{font-size:10px;padding:2px 9px;border-radius:999px;background:rgba(79,70,229,.25);color:#a5b4fc;border:1px solid rgba(79,70,229,.4);font-family:'IBM Plex Mono',monospace;font-weight:600}
+.oa{display:flex;gap:5px}
+.obc{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;background:rgba(79,70,229,.25);color:#c4b5fd;border:1px solid rgba(79,70,229,.4);transition:all .15s}
+.obc:hover{background:rgba(79,70,229,.5);color:#fff}
+.obc.success{background:rgba(16,185,129,.3);color:#6ee7b7;border-color:rgba(16,185,129,.5);}
+.obc.error{background:rgba(239,68,68,.3);color:#fca5a5;border-color:rgba(239,68,68,.5);}
+.odl{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;background:rgba(255,255,255,.07);color:#94a3b8;border:1px solid rgba(255,255,255,.12);transition:all .15s}
+.odl:hover{background:rgba(255,255,255,.15);color:#e2e8f0}
+.ob{flex:1;overflow-y:auto;padding:18px}
+.ob::-webkit-scrollbar{width:4px}
+.ob::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:999px}
+.ph{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;opacity:.5}
+.phi{font-size:48px;animation:floatIcon 4s ease-in-out infinite}
+@keyframes floatIcon{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.pht{font-size:15px;font-weight:700;color:#94a3b8}
+.phs{font-size:12px;color:#64748b;text-align:center;line-height:1.6;max-width:260px}
+
+/* ── PROMPT HIGHLIGHT ── */
+.ptx{font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.85;color:#e2e8f0;white-space:pre-wrap;word-break:break-word}
+.ptx .ph-section{color:#a5b4fc;font-weight:600;}
+.ptx .ph-value{color:#6ee7b7;}
+.ptx .ph-negative{color:#fca5a5;}
+
+.of2{padding:8px 16px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:6px;align-items:center;flex-shrink:0}
+.cc2{font-size:10px;color:#64748b;font-family:'IBM Plex Mono',monospace}
+.ftg{font-size:9px;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.07);color:#94a3b8;border:1px solid rgba(255,255,255,.08);font-weight:600}
+
+/* ── QUICK COPY BAR (bottom of output) ── */
+.qcopy{padding:8px 16px;border-top:1px solid rgba(255,255,255,.08);background:rgba(79,70,229,.08);flex-shrink:0;display:none;}
+.qcopy.show{display:flex;align-items:center;gap:8px;}
+.qcopy-lbl{font-size:11px;color:#a5b4fc;font-weight:600;flex:1;}
+.qcopy-btn{padding:6px 16px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;background:var(--primary);color:#fff;border:none;transition:all .15s;}
+.qcopy-btn:hover{background:#4338ca;}
+
+.wms{padding:9px 16px;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0}
+.wmr{display:flex;align-items:center;gap:8px}
+.wml{font-size:11px;color:#94a3b8;font-weight:600;white-space:nowrap}
+.wmin{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:5px 10px;font-size:11px;color:#cbd5e1;font-family:'IBM Plex Mono',monospace}
+.wmin:focus{outline:none;border-color:rgba(79,70,229,.5);color:#e2e8f0;background:rgba(255,255,255,.1)}
+.wmh{font-size:10px;color:#475569;margin-top:3px}
+
+/* ── TOAST NOTIFICATION ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;color:#f1f5f9;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;transition:transform .3s ease;border:1px solid rgba(255,255,255,.15);box-shadow:0 8px 24px rgba(0,0,0,.4);pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:rgba(16,185,129,.5);background:#064e3b;color:#6ee7b7;}
+.toast.err{border-color:rgba(239,68,68,.5);background:#450a0a;color:#fca5a5;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){:root{--sw:360px;--hh:120px;}.bt{font-size:16px}.bs{font-size:12px}}
+@media(max-width:700px){.lay{flex-direction:column;overflow:auto;padding:10px;gap:10px}:root{--sw:100%;}.sb{width:100%;flex-shrink:0}.out{flex:1;min-height:55vh}}
+</style>
+</head>
+<body>
+
+<div class="bg-wrap"></div>
+<div class="bg-overlay"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<div class="hdr">
+  <div class="brand">
+    <div class="logo-wrap">
+      <div class="logo-glow"></div>
+      <div class="logo-ring2"></div>
+      <div class="logo-ring1"></div>
+      <div class="logo-spark"></div>
+      <div class="logo-spark"></div>
+      <div class="logo-spark"></div>
+      <div class="logo-spark"></div>
+      <img src="https://img2.pic.in.th/57707fb0363a11e56eca7f9700e5a1f1.png" class="logo-img" alt="Logo">
+    </div>
+    <div>
+      <div class="bt">สร้างสื่อใบงานด้วย AI (Prompt Builder)</div>
+      <div class="bs">Kru Chadil – สื่อเพื่อ(น)ครู ✨</div>
+    </div>
+  </div>
+  <button class="brst" onclick="if(confirm('เริ่มต้นใหม่และล้างข้อมูลทั้งหมด?'))location.reload()">↺ รีเซ็ต</button>
+</div>
+
+<div class="lay">
+<div class="sb"><div class="sbi">
+
+  <!-- S1: วิชา -->
+  <div class="sk active" id="s1">
+    <div class="sh" onclick="tog('s1')">
+      <div class="sn">1</div><div class="stw"><div class="stt">วิชา</div><div class="stss" id="s1s">เลือกวิชาและชุดสื่อ</div></div><div class="sic">›</div>
+    </div>
+    <div class="sbody">
+      <div class="err-box" id="err1">⚠️ กรุณาเลือกวิชาและชุดสื่อก่อนครับ</div>
+      <div class="f"><div class="fl">เลือกวิชา</div><div class="srow" id="srow"></div></div>
+      <div class="f">
+        <div class="fl">ชุดสื่อ / หน่วยการเรียนรู้</div>
+        <select id="unit" onchange="onUnit()"><option value="">— เลือกวิชาก่อน —</option></select>
+        <div class="fh" id="uhint"></div>
+      </div>
+      <div class="snav"><button class="bn" onclick="nx('s1','s2')">ถัดไป →</button></div>
+    </div>
+  </div>
+
+  <!-- S2: รูปแบบ -->
+  <div class="sk locked" id="s2">
+    <div class="sh" onclick="tog('s2')">
+      <div class="sn">2</div><div class="stw"><div class="stt">รูปแบบใบงาน</div><div class="stss" id="s2s">เลือกประเภทกิจกรรม</div></div><div class="sic">›</div>
+    </div>
+    <div class="sbody">
+      <div class="err-box" id="err2">⚠️ กรุณาเลือกรูปแบบใบงานก่อนครับ</div>
+      <div class="wsgrid" id="wsgrid"></div>
+      <div class="snav"><button class="bp" onclick="pv('s2','s1')">← กลับ</button><button class="bn" onclick="nx('s2','s3')">ถัดไป →</button></div>
+    </div>
+  </div>
+
+  <!-- S3: เนื้อหา -->
+  <div class="sk locked" id="s3">
+    <div class="sh" onclick="tog('s3')">
+      <div class="sn">3</div><div class="stw"><div class="stt">เนื้อหา</div><div class="stss" id="s3s">กรอกข้อมูลใบงาน</div></div><div class="sic">›</div>
+    </div>
+    <div class="sbody">
+      <div id="ca"></div>
+      <div class="snav"><button class="bp" onclick="pv('s3','s2')">← กลับ</button><button class="bn" onclick="nx('s3','s4')">ถัดไป →</button></div>
+    </div>
+  </div>
+
+  <!-- S4: ธีม -->
+  <div class="sk locked" id="s4">
+    <div class="sh" onclick="tog('s4')">
+      <div class="sn">4</div><div class="stw"><div class="stt">ธีมภาพ & การตกแต่ง</div><div class="stss" id="s4s">เลือกธีมน่ารัก</div></div><div class="sic">›</div>
+    </div>
+    <div class="sbody">
+      <div class="err-box" id="err4">⚠️ กรุณาเลือกธีมก่อนครับ</div>
+      <div class="f"><div class="fl">ธีมภาพ</div><div class="tgrid" id="tgrid"></div></div>
+      <div class="f" style="margin-top:8px">
+        <button class="abtn" onclick="autoTheme()">✨ ตกแต่งอัตโนมัติ — AI เลือกให้</button>
+        <div class="fh" id="anote" style="color:#64748b">AI วิเคราะห์เนื้อหาแล้วเลือกธีมที่เหมาะสมให้อัตโนมัติ</div>
+      </div>
+      <div class="snav"><button class="bp" onclick="pv('s4','s3')">← กลับ</button><button class="bn" onclick="nx('s4','s5')">ถัดไป →</button></div>
+    </div>
+  </div>
+
+  <!-- S5: สร้าง -->
+  <div class="sk locked" id="s5">
+    <div class="sh" onclick="tog('s5')">
+      <div class="sn">5</div><div class="stw"><div class="stt">สร้าง Prompt</div><div class="stss" id="s5s">ตรวจสอบแล้วกดสร้าง</div></div><div class="sic">›</div>
+    </div>
+    <div class="sbody">
+      <div class="sum-grid" id="sumgrid"></div>
+      <button class="gbtn" onclick="doGen()">✨ สร้าง Prompt</button>
+      <div class="snav" style="margin-top:6px"><button class="bp" onclick="pv('s5','s4')">← กลับแก้ไข</button></div>
+    </div>
+  </div>
+
+</div></div>
+
+<!-- OUTPUT -->
+<div class="out">
+  <div class="oh">
+    <div style="display:flex;align-items:center"><div class="odo"></div><div class="ott">Generated Prompt</div></div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <span class="ost" id="outst">รอข้อมูล</span>
+      <div class="oa">
+        <button class="obc" id="cpbtn" onclick="cpP()">📋 คัดลอก</button>
+        <button class="odl" onclick="dlP()">⬇ บันทึก .txt</button>
+      </div>
+    </div>
+  </div>
+  <div class="ob">
+    <div class="ph" id="ph">
+      <div class="phi">✦</div>
+      <div class="pht">Prompt จะปรากฏที่นี่</div>
+      <div class="phs">กรอกข้อมูล → เลือกธีม → กด "สร้าง Prompt"<br><br>💡 เปิดไฟล์นี้ด้วย Chrome หรือ Edge เพื่อการใช้งานที่ดีที่สุด</div>
+    </div>
+    <pre class="ptx" id="po" style="display:none"></pre>
+  </div>
+  <!-- Quick Copy Bar -->
+  <div class="qcopy" id="qcopy">
+    <div class="qcopy-lbl">✅ Prompt พร้อมแล้ว! คัดลอกแล้วนำไปใช้ใน AI ได้เลย</div>
+    <button class="qcopy-btn" onclick="cpP()">📋 คัดลอก Prompt</button>
+  </div>
+  <div class="wms">
+    <div class="wmr"><div class="wml">ลายน้ำ</div><input class="wmin" id="wm" placeholder="เช่น ครูชาดิล, โรงเรียน..."></div>
+    <div class="wmh">ชื่อครูหรือโรงเรียน จะถูกใส่ใน Prompt อัตโนมัติ</div>
+  </div>
+  <div class="of2"><div class="cc2" id="cc2">0 chars</div><div id="ftgs" style="display:flex;gap:4px;flex-wrap:wrap"></div></div>
+</div>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const SUBJS=[
+  {id:'thai', label:'ภาษาไทย',    c:'#dc2626'},
+  {id:'math', label:'คณิตศาสตร์', c:'#2563eb'},
+  {id:'sci',  label:'วิทยาศาสตร์',c:'#16a34a'},
+  {id:'eng',  label:'ภาษาอังกฤษ', c:'#7c3aed'},
+  {id:'comp', label:'คอมพิวเตอร์',c:'#ea580c'},
+  {id:'soc',  label:'สังคมศึกษา', c:'#0891b2'},
+];
+const UNITS={
+  thai:[
+    {id:'phayanchana',label:'พยัญชนะไทย ก–ฮ',hint:'โปสเตอร์พยัญชนะ 44 ตัว (ตามแบบ CSV)'},
+    {id:'matraSakot', label:'มาตราตัวสะกด',   hint:'8 มาตรา'},
+    {id:'prasomKham', label:'การประสมคำ',       hint:'ประสม พยัญชนะ + สระ'},
+    {id:'taengPra',   label:'ฝึกแต่งประโยค',   hint:'เรียงคำให้เป็นประโยค'},
+  ],
+  math:[
+    {id:'bawkLek',  label:'การบวกเลข',           hint:'โจทย์บวกหลากหลายรูปแบบ'},
+    {id:'lopLek',   label:'การลบเลข',             hint:'โจทย์ลบ'},
+    {id:'prapaet',  label:'การเปรียบเทียบจำนวน', hint:'ใช้ > < ='},
+    {id:'numCount', label:'การนับและเขียนตัวเลข', hint:'นับ เขียน เลข 0-9'},
+  ],
+  sci:[
+    {id:'sci_env',    label:'สิ่งแวดล้อมรอบตัว',       hint:'สังเกตและจำแนกสิ่งต่างๆ'},
+    {id:'sci_living', label:'สิ่งมีชีวิต-ไม่มีชีวิต',  hint:'จำแนกประเภท ✓ ✗'},
+    {id:'sci_body',   label:'อวัยวะร่างกายมนุษย์',      hint:'ติดป้าย + MCQ'},
+    {id:'sci_plant',  label:'ส่วนต่างๆของพืช',          hint:'diagram labeling'},
+    {id:'sci_animal', label:'อวัยวะสัตว์ & ที่อยู่อาศัย',hint:'ติดป้าย + จับคู่'},
+  ],
+  eng:[
+    {id:'eng_az',     label:'ฝึกเขียน A–Z',            hint:'Tracing ตัวใหญ่+เล็ก + ตกแต่งกรอบได้'},
+    {id:'eng_vocab',  label:'คำศัพท์ + ภาพ',           hint:'vocab card + matching + fill in'},
+    {id:'eng_sentence',label:'ประโยคภาษาอังกฤษ',       hint:'sentence structure exercises'},
+  ],
+  comp:[
+    {id:'comp_parts', label:'ส่วนประกอบคอมพิวเตอร์',   hint:'diagram ติดป้าย + จับคู่อุปกรณ์'},
+    {id:'comp_usage', label:'การใช้งานคอมพิวเตอร์',     hint:'MCQ + fill in'},
+  ],
+  soc:[
+    {id:'soc_thai',  label:'ความเป็นไทย',              hint:'วันสำคัญ ประเพณี ธงชาติ'},
+    {id:'soc_geo',   label:'ภูมิศาสตร์เบื้องต้น',      hint:'แผนที่ ภาค จังหวัด'},
+    {id:'soc_civic', label:'หน้าที่พลเมือง',            hint:'กฎระเบียบ ครอบครัว สังคม'},
+  ],
+};
+const SHARED={
+  diagram_label:{id:'diagram_label',icon:'🔬',name:'ติดป้าย (Diagram Labeling)',tag:'Diagram',desc:'ภาพกลาง + ลูกศร + ช่องว่าง + Word Bank ไม่มีเฉลย'},
+  fillin:{id:'fillin',icon:'✏️',name:'เติมคำในช่องว่าง',tag:'Fill in Blank',desc:'สร้างช่องว่างสำหรับเขียนตอบ เลือกจำนวนข้อได้'},
+  matching:{id:'matching',icon:'🔗',name:'จับคู่ภาพ-คำ',tag:'Matching',desc:'2 คอลัมน์ โยงเส้น ห้ามมี label ใต้ภาพ'},
+  mcq:{id:'mcq',icon:'📝',name:'อ่านคำถาม-เลือกตอบ',tag:'Multiple Choice',desc:'สร้างกล่องคำถามและช้อยส์ ก ข ค ง ตามจำนวนที่ต้องการ'},
+  classify:{id:'classify',icon:'☑️',name:'จำแนกประเภท (✓/✗)',tag:'Classify',desc:'ภาพ + วงกลม ✓ หรือ ✗ จำแนกตามเกณฑ์'},
+  observe:{id:'observe',icon:'👁️',name:'สังเกตและเขียนชื่อ',tag:'Observe & Write',desc:'ภาพ ecosystem/scene + 12 ช่องว่างเขียนชื่อ'},
+  habitat_match:{id:'habitat_match',icon:'🦁',name:'จับคู่สัตว์-ที่อยู่อาศัย',tag:'Habitat Match',desc:'ภาพสัตว์ ← โยงเส้น → ที่อยู่อาศัย ไม่มี label'},
+  coloring:{id:'coloring',icon:'🖍️',name:'ระบายสี (Line Art)',tag:'Coloring',desc:'ภาพลายเส้นขาวดำ สไตล์ Infographic ไม่มีสี สำหรับระบายสี'},
+};
+const WS_TYPES={
+  phayanchana:[{id:'tracing_full',icon:'🖼️',name:'โปสเตอร์พยัญชนะไทย 44 ตัว ก-ฮ (8 แถว)',tag:'Infographic Poster',desc:'โปสเตอร์ให้ความรู้ จัดเรียง 8 แถวตามรูปแบบเป๊ะๆ ไม่ใช่ใบงานเขียน'},{id:'thai_fill_consonant',icon:'✏️',name:'เติมพยัญชนะไทยในช่องว่าง',tag:'Fill Consonant',desc:'ภาพ + เส้นประช่องว่าง นักเรียนเติมพยัญชนะ layout 4 คอลัมน์ ตกแต่งกรอบได้'},{id:'thai_tracing_44',icon:'✍️',name:'พยัญชนะไทย 44 ตัว (Tracing)',tag:'Thai Tracing',desc:'กล่องมุมมน เส้นประพยัญชนะครบ 44 ตัว 6 คอลัมน์ × 8 แถว ตามลำดับ ก-ฮ'},SHARED.coloring],
+  matraSakot:[{id:'matsak_pic',icon:'🖼️',name:'ดูภาพเติมคำ (Word Bank 12 ช่อง)',tag:'Picture Grid',desc:'3×4 grid + Word Bank 2 แถว สลับลำดับ'},SHARED.fillin,SHARED.matching,SHARED.coloring],
+  prasomKham:[{id:'cons_check',icon:'☑️',name:'เลือกพยัญชนะต้น (✓)',tag:'Multiple Choice',desc:'ภาพ + 5 ตัวเลือก ทำเครื่องหมาย ✓'},{id:'vowel_comb',icon:'⭕',name:'ประสมสระวงกลม',tag:'Combination',desc:'3 วงกลม [พยัญชนะ]+[สระ]+[พยัญชนะ]'},SHARED.matching,{id:'pic_combo',icon:'🧩',name:'ประสมคำจาก 2 ภาพ',tag:'Image Comb.',desc:'ภาพ1 + สระ + ภาพ2 + สระ = เขียนคำ'}],
+  taengPra:[{id:'sent_build',icon:'📝',name:'เรียงคำเป็นประโยค',tag:'Sentence Build',desc:'ภาพ + คำสับลำดับ → เรียงประโยค'},SHARED.coloring],
+  bawkLek:[{id:'add_list',icon:'🔢',name:'บวกเลข — รายการ 20 ข้อ',tag:'List 2-col',desc:'2 คอลัมน์ × 20 ข้อ วงกลมเลขข้อ'},{id:'add_branch',icon:'🌿',name:'บวกเลข — แตกกิ่ง',tag:'Branch Arrow',desc:'เลขหลัก → ลูกศร 4 เส้น → ช่องคำตอบ'},{id:'add_card',icon:'🃏',name:'บวกเลข — การ์ด 3×3',tag:'Card Grid',desc:'9 การ์ดมุมมน ตั้งเลขแนวตั้ง'}],
+  lopLek:[{id:'sub_list',icon:'🔢',name:'ลบเลข — รายการ 20 ข้อ',tag:'List 2-col',desc:'2 คอลัมน์ × 20 ข้อ'},{id:'sub_card',icon:'🃏',name:'ลบเลข — การ์ด 3×3',tag:'Card Grid',desc:'9 การ์ดมุมมน'}],
+  prapaet:[{id:'compare_grid',icon:'⚖️',name:'เปรียบเทียบ > < = (16 ข้อ)',tag:'Comparison',desc:'2 คอลัมน์ × 16 ข้อ ช่องใส่เครื่องหมาย'},SHARED.coloring],
+  numCount:[{id:'trace_num',icon:'✍️',name:'เขียนตัวเลขตามรอย 0–9',tag:'Number Tracing',desc:'เลข 0–9 เส้นประล้วน'},{id:'count_obj',icon:'🔢',name:'นับสิ่งของแล้วเขียนจำนวน',tag:'Count & Write',desc:'ภาพ → นับ → เขียนตัวเลข'},SHARED.coloring],
+  sci_env:[SHARED.observe,SHARED.classify,SHARED.fillin,SHARED.mcq,SHARED.coloring],
+  sci_living:[SHARED.classify,SHARED.matching,SHARED.fillin,SHARED.coloring],
+  sci_body:[SHARED.diagram_label,SHARED.mcq,SHARED.fillin,SHARED.matching],
+  sci_plant:[SHARED.diagram_label,SHARED.fillin,SHARED.matching,SHARED.coloring],
+  sci_animal:[SHARED.diagram_label,SHARED.habitat_match,SHARED.matching,SHARED.mcq,SHARED.coloring],
+  eng_az:[{id:'eng_tracing',icon:'✍️',name:'Tracing A–Z (ตกแต่งกรอบได้)',tag:'Letter Tracing',desc:'ตัวใหญ่+เล็ก 3-line ย่อส่วนตรงกลางให้ตกแต่งกรอบขอบได้'},{id:'eng_tracing_full',icon:'✍️',name:'Tracing A–Z (ครบทุกตัว)',tag:'Full Alphabet',desc:'26 ตัวในหน้าเดียว เส้นประล้วน'},{id:'missing_az',icon:'🍎',name:'เติมคำ A-Z ที่หายไป',tag:'Missing Letter',desc:'แอปเปิ้ล/รูปทรงน่ารัก ใส่ตัวอักษรที่หายไปในช่องว่าง สามารถตกแต่งกรอบได้'},SHARED.coloring],
+  eng_vocab:[SHARED.matching,SHARED.fillin,SHARED.diagram_label,SHARED.mcq,SHARED.classify,SHARED.coloring],
+  eng_sentence:[{id:'sent_build',icon:'📝',name:'เรียงคำเป็นประโยค EN',tag:'Sentence Build',desc:'scrambled words → sentence'},SHARED.fillin,SHARED.mcq,SHARED.coloring],
+  comp_parts:[SHARED.diagram_label,SHARED.matching,SHARED.fillin,SHARED.mcq,SHARED.coloring],
+  comp_usage:[SHARED.mcq,SHARED.fillin,SHARED.matching,SHARED.classify],
+  soc_thai:[SHARED.fillin,SHARED.matching,SHARED.mcq,SHARED.diagram_label,SHARED.classify,SHARED.coloring],
+  soc_geo:[SHARED.diagram_label,SHARED.fillin,SHARED.matching,SHARED.mcq,SHARED.coloring],
+  soc_civic:[SHARED.fillin,SHARED.mcq,SHARED.matching,SHARED.classify,SHARED.coloring],
+};
+const AUTO_THEME={
+  phayanchana:'school',matraSakot:'jungle',prasomKham:'candy',taengPra:'flower',
+  bawkLek:'car',lopLek:'car',prapaet:'flower',numCount:'school',
+  sci_env:'jungle',sci_living:'jungle',sci_body:'school',sci_plant:'forest',sci_animal:'jungle',
+  eng_az:'school',eng_vocab:'candy',eng_sentence:'school',
+  comp_parts:'tech',comp_usage:'tech',
+  soc_thai:'thai',soc_geo:'thai',soc_civic:'school',
+};
+const THEMES=[
+  {id:'pixar3d',icon:'🌟',name:'Pixar 3D',desc:'สไตล์ 3 มิติ ตกแต่งตามเนื้อหา',val:{s:'cute premium 3D Pixar Disney style cartoon, soft studio lighting, highly detailed 3D render, vibrant colors',d:'cute 3D decorative elements matching the main topic/subject of the worksheet',b:'clean soft gradient background suitable for writing',e:'soft 3D drop shadows, subtle glowing light'}},
+  {id:'anime',icon:'🌸',name:'อนิเมะ',desc:'สไตล์อนิเมะญี่ปุ่น ตกแต่งตามเนื้อหา',val:{s:'premium 2D anime style, aesthetic, beautiful soft watercolor coloring, clear line art',d:'anime style decorative elements matching the main topic/subject of the worksheet',b:'soft pastel background, clean center for writing',e:'floating light dust, soft magical lighting'}},
+  {id:'cartoon2d',icon:'🎨',name:'Cartoon 2D',desc:'การ์ตูน 2D ตกแต่งตามเนื้อหา',val:{s:'cute premium 2D modern vector cartoon style, bright solid colors, clean thick outlines',d:'2D cartoon decorative elements matching the main topic/subject of the worksheet',b:'clean white background',e:'simple vector sparkles, cute halftone accents'}},
+  {id:'car',icon:'🚗',name:'รถน่ารัก',desc:'รถยนต์ ไฟจราจร',val:{s:'cute premium 2D cartoon, bright saturated colors, soft gradient shading',d:'cartoon cars with cute faces in multiple colors, school buses, police cars, fire trucks, traffic lights, road signs',b:'notebook lined paper, light blue-white, faint road pattern',e:'sparkles, speed lines at corners'}},
+  {id:'flower',icon:'🌸',name:'สวนดอกไม้',desc:'ดอกไม้ ผีเสื้อ นก',val:{s:'cute premium 2D cartoon, pastel soft colors, soft gradient shading',d:'flowers (cherry blossom, sunflower, daisy), leaves, butterflies, small birds, bees',b:'notebook lined paper, light green-white pastel, soft sunlight',e:'sparkles, floating petals'}},
+  {id:'space',icon:'🚀',name:'อวกาศ',desc:'ดาว จรวด ดาวเคราะห์',val:{s:'cute premium 2D cartoon, vibrant colors, cosmic atmosphere',d:'cute rockets, planets (Saturn, Earth, Moon), stars, comets, UFO',b:'notebook lined paper, soft dark blue-purple edge glow, stars',e:'twinkling sparkles, comet trails'}},
+  {id:'ocean',icon:'🐠',name:'ใต้ทะเล',desc:'ปลา ปะการัง ฟองอากาศ',val:{s:'cute premium 2D cartoon, aqua blue palette, soft gradient shading',d:'cute fish, crabs, seahorses, coral, shells, starfish, bubbles',b:'notebook lined paper, soft aqua tint, wave pattern',e:'floating bubbles, sparkle reflections'}},
+  {id:'forest',icon:'🌲',name:'ป่าไม้/ธรรมชาติ',desc:'ต้นไม้ สัตว์น่ารัก',val:{s:'cute premium 2D cartoon, bright natural colors',d:'cute forest animals (owl, rabbit, fox, bear), trees, mushrooms, flowers',b:'notebook lined paper, warm green tint, leaf silhouette',e:'sparkles, butterflies'}},
+  {id:'jungle',icon:'🦁',name:'ป่าและสัตว์',desc:'สิงโต ช้าง ลิง',val:{s:'cute premium 2D cartoon, vibrant jungle colors',d:'cute jungle animals (lion, elephant, giraffe, monkey, parrot), tropical leaves, vines',b:'notebook lined paper, warm green tint, jungle leaves',e:'sparkles, butterflies'}},
+  {id:'school',icon:'🏫',name:'ห้องเรียน',desc:'ดินสอ หนังสือ กระดาน',val:{s:'cute premium 2D cartoon, warm cheerful colors',d:'pencils, books, rulers, erasers, crayons, backpacks, apple, chalkboard elements',b:'notebook lined paper, warm cream-white',e:'gold stars, small sparkles'}},
+  {id:'candy',icon:'🍭',name:'ลูกอม/หวาน',desc:'ลูกกวาด เค้ก หวาน',val:{s:'cute premium 2D kawaii cartoon, candy pastel colors (pink/mint/lavender/yellow), glossy shading',d:'lollipops, cupcakes, candy canes, ice cream, donuts',b:'notebook lined paper, soft pink-white',e:'glossy sparkles, hearts'}},
+  {id:'thai',icon:'🏛️',name:'ไทยน่ารัก',desc:'ช้าง ดอกไม้ไทย ลายไทย',val:{s:'cute premium 2D Thai-style cartoon, warm traditional colors (vermilion/gold/green)',d:'cute elephants, lotus flowers, Thai temple, traditional patterns, golden accents',b:'notebook lined paper, warm cream-gold, Thai pattern',e:'golden sparkles, lotus petals'}},
+  {id:'tech',icon:'💻',name:'เทคโนโลยี',desc:'หุ่นยนต์ คอมพิวเตอร์',val:{s:'cute premium 2D cartoon, clean modern colors, blue-purple palette',d:'cute robots, computers, tablets, gears, circuit patterns, stars',b:'notebook lined paper, soft blue-white, subtle circuit texture',e:'digital sparkles, pixels'}},
+  {id:'dino',icon:'🦕',name:'ไดโนเสาร์',desc:'ไดโนเสาร์น่ารัก ป่าโบราณ',val:{s:'cute premium 2D cartoon, bright vibrant colors',d:'cute friendly dinosaurs (T-rex, triceratops, stegosaurus), ferns, eggs, footprints',b:'notebook lined paper, warm green tint, prehistoric plants',e:'sparkles, footprints'}},
+  {id:'farm',icon:'🚜',name:'ฟาร์ม',desc:'แทรกเตอร์ สัตว์ฟาร์ม',val:{s:'cute premium 2D cartoon, warm sunny colors',d:'cute farm animals (cow, pig, chicken, sheep), tractor, sunflowers, barn',b:'notebook lined paper, warm yellow-green tint',e:'sparkles, leaves'}},
+  {id:'papercut',icon:'✂️',name:'เปเปอร์คัท',desc:'ศิลปะกระดาษตัดซ้อนชั้น',val:{s:'premium 2D paper cut-out art style, layered paper illustration, crisp edges, soft paper shadows, colorful craft style',d:'layered paper cut-out borders, paper craft elements, geometric abstract shapes, overlapping paper layers',b:'subtle paper texture background, light pastel layered paper',e:'drop shadows between layers, craft paper aesthetics'}},
+  {id:'education',icon:'🎓',name:'การศึกษา',desc:'อุปกรณ์การเรียน วิชาการ',val:{s:'cute premium 2D cartoon, smart and clean educational style, bright cheerful colors',d:'books, graduation caps, microscopes, globes, lightbulbs, pencils, rulers, alphabets, math symbols',b:'clean white or very soft pastel background, subtle grid or notebook paper',e:'sparkles, floating letters and numbers'}},
+  {id:'fun',icon:'🎪',name:'สนุกสนาน',desc:'สวนสนุก ลูกโป่ง พลุ',val:{s:'cute premium 2D cartoon, highly energetic and playful, bright vibrant rainbow colors',d:'bunting banners, balloons, confetti, carnival tents, ferris wheel, fireworks, playful stars',b:'light cheerful background with subtle confetti pattern',e:'party streamers, floating balloons, sparkles'}},
+  {id:'fantasy',icon:'🦄',name:'แฟนตาซี',desc:'ยูนิคอร์น ปราสาท เวทมนตร์',val:{s:'cute premium 2D cartoon, magical fantasy aesthetics, pastel dreamy colors (pink, purple, gold)',d:'cute unicorns, magical wands, floating castles, rainbows, glowing mushrooms, fairy wings',b:'dreamy pastel galaxy or soft cloud background',e:'glowing stars, magical dust, light sparkles'}},
+  {id:'cat',icon:'🐱',name:'แมวน้อย',desc:'ลูกแมวน่ารัก รอยเท้าแมว',val:{s:'cute premium 2D kawaii cartoon, soft pastel colors, warm and cozy aesthetic',d:'cute little kittens in various poses, cat paws, yarn balls, fish toys, cozy pillows, milk bowls',b:'soft cream or light pink background with subtle paw prints',e:'floating hearts, little sparkles, cute cat footprints'}},
+  {id:'thaipattern',icon:'💠',name:'ลายไทย',desc:'ลายกนก ลายไทยประยุกต์',val:{s:'premium 2D modern Thai traditional art, elegant Thai vector patterns, gold and elegant color palette',d:'Thai Kanok patterns, traditional Thai floral motifs, elegant golden borders, lotus outlines',b:'soft cream paper background with faint Thai traditional watermark',e:'golden accents, elegant glowing borders'}},
+];
+
+let S={subj:'',unit:'',wsType:'',theme:'',isAuto:false,prompt:''};
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type='ok', dur=2500){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(type==='ok'?'ok':'err')+' show';
+  setTimeout(()=>t.className='toast',dur);
+}
+
+// ============================================================
+// VALIDATE
+// ============================================================
+function validateStep(step){
+  if(step==='s1'){
+    const ok = S.subj && S.unit;
+    document.getElementById('err1').classList.toggle('show',!ok);
+    return ok;
+  }
+  if(step==='s2'){
+    const ok = !!S.wsType;
+    document.getElementById('err2').classList.toggle('show',!ok);
+    return ok;
+  }
+  if(step==='s4'){
+    const ok = !!S.theme;
+    document.getElementById('err4').classList.toggle('show',!ok);
+    return ok;
+  }
+  return true;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init(){
+  document.getElementById('srow').innerHTML=SUBJS.map(s=>`
+    <div class="sc ${S.subj===s.id?'on':''}" style="${S.subj===s.id?`background:${s.c};border-color:${s.c};`:''}"
+      onclick="pickSubj('${s.id}')">
+      <div class="dot" style="background:${s.c}"></div>${s.label}
+    </div>`).join('');
+  document.getElementById('tgrid').innerHTML=THEMES.map(t=>`
+    <div class="tc ${S.theme===t.id&&!S.isAuto?'on':''}" onclick="pickTheme('${t.id}')">
+      <div class="ti">${t.icon}</div><div class="tn">${t.name}</div><div class="td">${t.desc}</div>
+    </div>`).join('');
+}
+
+// ── AUTO VOCAB MAP ──
+const VOCAB_MAP={
+  A:'A is for Apple',B:'B is for Ball',C:'C is for Cat',D:'D is for Dog',
+  E:'E is for Elephant',F:'F is for Fish',G:'G is for Giraffe',H:'H is for Hat',
+  I:'I is for Ice cream',J:'J is for Jellyfish',K:'K is for Kite',L:'L is for Lion',
+  M:'M is for Monkey',N:'N is for Nest',O:'O is for Orange',P:'P is for Penguin',
+  Q:'Q is for Queen',R:'R is for Rainbow',S:'S is for Sun',T:'T is for Tiger',
+  U:'U is for Umbrella',V:'V is for Violin',W:'W is for Whale',X:'X is for Xylophone',
+  Y:'Y is for Yacht',Z:'Z is for Zebra',
+};
+function autoFillWord(){
+  const letter=document.getElementById('c_letter')?.value;
+  if(letter&&VOCAB_MAP[letter]){
+    document.getElementById('c_word').value=VOCAB_MAP[letter];
+  }
+}
+
+function pickSubj(id){
+  S.subj=id; S.unit=''; S.wsType=''; init();
+  const opts=UNITS[id]||[];
+  document.getElementById('unit').innerHTML=`<option value="">— เลือกชุดสื่อ —</option>`+
+    opts.map(u=>`<option value="${u.id}">${u.label}</option>`).join('');
+  document.getElementById('uhint').textContent='';
+  document.getElementById('s1s').textContent=SUBJS.find(x=>x.id===id)?.label;
+  document.getElementById('err1').classList.remove('show');
+}
+
+function onUnit(){
+  const id=document.getElementById('unit').value; S.unit=id;
+  const u=(UNITS[S.subj]||[]).find(x=>x.id===id);
+  document.getElementById('uhint').textContent=u?.hint||'';
+  document.getElementById('err1').classList.remove('show');
+}
+
+function pickTheme(id){
+  S.theme=id; S.isAuto=false; init();
+  document.getElementById('s4s').textContent=THEMES.find(x=>x.id===id)?.name;
+  document.getElementById('err4').classList.remove('show');
+  // sync tgrid highlight when isAuto=false
+  document.querySelectorAll('.tc').forEach((c,i)=>{
+    c.classList.toggle('on', THEMES[i]?.id===id);
+  });
+}
+
+function autoTheme(){
+  const id=AUTO_THEME[S.wsType]||AUTO_THEME[S.unit]||'school';
+  S.theme=id; S.isAuto=true; init();
+  const t=THEMES.find(x=>x.id===id);
+  document.getElementById('anote').textContent=`✨ เลือกธีม "${t?.name}" ให้อัตโนมัติ`;
+  document.getElementById('s4s').textContent=`อัตโนมัติ: ${t?.name}`;
+  document.getElementById('err4').classList.remove('show');
+  document.querySelectorAll('.tc').forEach((c,i)=>{
+    c.classList.toggle('on', THEMES[i]?.id===id);
+  });
+}
+
+function renderWsTypes(){
+  const types=WS_TYPES[S.unit]||[];
+  document.getElementById('wsgrid').innerHTML=types.length
+    ?types.map(t=>`<div class="wsc ${S.wsType===t.id?'on':''}" onclick="pickWs('${t.id}')">
+      <div class="wsc-top"><div class="wsc-icon">${t.icon}</div><div class="wsc-name">${t.name}</div><span class="wsc-tag">${t.tag}</span></div>
+      <div class="wsc-desc">${t.desc}</div></div>`).join('')
+    :'<div style="font-size:12px;color:#64748b;padding:8px">กำลังเพิ่มเนื้อหาเร็วๆ นี้</div>';
+}
+
+function pickWs(id){
+  S.wsType=id; renderWsTypes();
+  const allT=Object.values(WS_TYPES).flat();
+  const t=allT.find(x=>x.id===id);
+  document.getElementById('s2s').textContent=t?.name||'เลือกแล้ว';
+  document.getElementById('err2').classList.remove('show');
+  renderContent();
+}
+
+// ── TOG: FIX — done steps สามารถกดเปิดได้ ──
+function tog(id){
+  const el=document.getElementById(id);
+  if(el.classList.contains('locked')) return;
+  const was=el.classList.contains('active');
+  document.querySelectorAll('.sk').forEach(b=>b.classList.remove('active'));
+  if(!was) el.classList.add('active');
+}
+
+function nx(from,to){
+  // Validate ก่อน
+  if(!validateStep(from)){
+    showToast('กรุณากรอกข้อมูลให้ครบก่อนครับ ⚠️','err');
+    return;
+  }
+  document.getElementById(from).classList.remove('active');
+  document.getElementById(from).classList.add('done');
+  const t=document.getElementById(to);
+  t.classList.remove('locked'); t.classList.add('active');
+  if(to==='s2') renderWsTypes();
+  if(to==='s3') renderContent();
+  if(to==='s5') buildSum();
+  t.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function pv(from,to){
+  document.getElementById(from).classList.remove('active');
+  const t=document.getElementById(to);
+  t.classList.remove('done'); t.classList.add('active');
+  t.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// ── SUMMARY ──
+function buildSum(){
+  const u=(UNITS[S.subj]||[]).find(x=>x.id===S.unit);
+  const subj=SUBJS.find(x=>x.id===S.subj);
+  const allT=Object.values(WS_TYPES).flat();
+  const t=allT.find(x=>x.id===S.wsType);
+  const theme=THEMES.find(x=>x.id===S.theme);
+  const hasNum=document.getElementById('c_hasNum')?.checked;
+  const numVal=document.getElementById('c_num')?.value||'1';
+  const title=document.getElementById('c_title')?.value||document.getElementById('c_matra')?.value||document.getElementById('c_letter')?.value||'(ไม่ระบุ)';
+  const wm=document.getElementById('wm')?.value||'(ไม่ระบุ)';
+
+  document.getElementById('sumgrid').innerHTML=`
+    <div class="sum-item"><div class="sum-label">📚 วิชา</div><div class="sum-val">${subj?.label||'—'}</div></div>
+    <div class="sum-item"><div class="sum-label">📖 ชุดสื่อ</div><div class="sum-val">${u?.label||'—'}</div></div>
+    <div class="sum-item highlight"><div class="sum-label">📄 รูปแบบ</div><div class="sum-val">${t?.name||'—'}</div></div>
+    <div class="sum-item highlight"><div class="sum-label">🎨 ธีม</div><div class="sum-val">${S.isAuto?'✨ Auto: ':''}${theme?.name||'—'}</div></div>
+    <div class="sum-item"><div class="sum-label">✏️ ชื่อใบงาน</div><div class="sum-val">${title}</div></div>
+    <div class="sum-item"><div class="sum-label">🔢 ใบงานที่</div><div class="sum-val">${hasNum?numVal:'ไม่แสดง'}</div></div>
+    <div class="sum-item" style="grid-column:1/-1"><div class="sum-label">💧 ลายน้ำ</div><div class="sum-val">${wm}</div></div>
+  `;
+}
+
+// ── MCQ / FILLIN dynamic UI ──
+function buildMcqUI(){
+  const c=document.getElementById('mcq_container'); if(!c)return;
+  const n=parseInt(document.getElementById('c_qnum').value)||5;
+  const oldVals={};
+  for(let i=1;i<=8;i++){
+    if(document.getElementById(`mcq_q_${i}`)) oldVals[`q_${i}`]=document.getElementById(`mcq_q_${i}`).value;
+    for(let j=1;j<=4;j++){if(document.getElementById(`mcq_c_${i}_${j}`)) oldVals[`c_${i}_${j}`]=document.getElementById(`mcq_c_${i}_${j}`).value;}
+  }
+  let h='';
+  for(let i=1;i<=n;i++){
+    h+=`<div class="f" style="background:#f8fafc;padding:10px;border-radius:8px;border:1px dashed #e2e8f0;margin-bottom:8px;">
+      <div class="fl" style="color:var(--primary)">ข้อที่ ${i}</div>
+      <input type="text" id="mcq_q_${i}" placeholder="คำถามข้อที่ ${i} (เช่น จมูกทำหน้าที่อะไร?)" style="margin-bottom:6px;font-weight:bold;" value="${oldVals[`q_${i}`]||''}">
+      <div class="g2">
+        <input type="text" id="mcq_c_${i}_1" placeholder="ก. ตัวเลือก" value="${oldVals[`c_${i}_1`]||''}">
+        <input type="text" id="mcq_c_${i}_2" placeholder="ข. ตัวเลือก" value="${oldVals[`c_${i}_2`]||''}">
+        <input type="text" id="mcq_c_${i}_3" placeholder="ค. ตัวเลือก" value="${oldVals[`c_${i}_3`]||''}">
+        <input type="text" id="mcq_c_${i}_4" placeholder="ง. ตัวเลือก" value="${oldVals[`c_${i}_4`]||''}">
+      </div></div>`;
+  }
+  c.innerHTML=h;
+}
+
+function buildFillinUI(){
+  const c=document.getElementById('fillin_container'); if(!c)return;
+  const n=parseInt(document.getElementById('c_fillnum').value)||5;
+  const oldVals={};
+  for(let i=1;i<=7;i++){if(document.getElementById(`fill_q_${i}`)) oldVals[`q_${i}`]=document.getElementById(`fill_q_${i}`).value;}
+  let h='';
+  for(let i=1;i<=n;i++){
+    h+=`<div class="f" style="background:#f8fafc;padding:10px;border-radius:8px;border:1px dashed #e2e8f0;margin-bottom:8px;">
+      <div class="fl" style="color:var(--primary)">ข้อที่ ${i}</div>
+      <textarea id="fill_q_${i}" rows="2" placeholder="เช่น: ข้อ ${i} พืชมี _____ หลักๆ ได้แก่ ราก ลำต้น ใบ">${oldVals[`q_${i}`]||''}</textarea>
+    </div>`;
+  }
+  c.innerHTML=h;
+}
+
+const GLOBAL_SETTINGS=`
+<div class="ubox" style="margin-bottom:8px;border-left:3px solid var(--primary);">
+  <div class="ubh">⚙️ ตั้งค่าทั่วไป</div>
+  <div class="f">
+    <div class="fl" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <input type="checkbox" id="c_hasNum" checked style="width:16px;height:16px;cursor:pointer;">
+      <label for="c_hasNum" style="cursor:pointer;color:#1e293b;font-weight:700;font-size:12px;text-transform:none;">แสดงป้าย "ใบงานที่"</label>
+    </div>
+    <input type="number" id="c_num" value="1" style="margin-top:6px;" placeholder="ระบุเลขใบงาน">
+  </div>
+</div>`;
+
+const HDR_CORE=`<div class="cbox">
+  <strong>🔒 Core Header (ล็อคทุกใบงาน):</strong><br>
+  กล่องมุมมนด้านบน: ชื่อ ………… นามสกุล ………… ชั้น ……… เลขที่ ………<br>
+  มุมบนขวา: ช่องคะแนน วงกลม "คะแนน"
+</div>`;
+
+function renderContent(){
+  const t=CONTENT_TEMPLATES[S.wsType];
+  document.getElementById('ca').innerHTML=GLOBAL_SETTINGS+(t||`${HDR_CORE}<div class="cbox" style="margin-top:8px">ยังไม่มี template</div>`);
+  const chk=document.getElementById('c_hasNum');
+  const numInp=document.getElementById('c_num');
+  if(chk&&numInp){
+    chk.addEventListener('change',(e)=>{numInp.style.display=e.target.checked?'block':'none';});
+  }
+  if(S.wsType==='mcq') buildMcqUI();
+  else if(S.wsType==='fillin') buildFillinUI();
+  else if(S.wsType==='eng_tracing') autoFillWord();
+}
+
+// ============================================================
+// CONTENT TEMPLATES
+// ============================================================
+const CONTENT_TEMPLATES={
+  thai_fill_consonant:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core (ตามภาพตัวอย่าง):</strong><br>• ไอคอนฝั่งซ้าย + เส้นประฝั่งขวา (พื้นที่เขียน)<br>• 4 คอลัมน์ × 11 แถว ครบ 44 ตัว — ไม่มีตกแต่งกรอบ<br>• พื้นหลังขาว สะอาด พิมพ์ได้ทันที</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="พยัญชนะไทย ก-ฮ"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนเติมพยัญชนะไทยในช่องว่างให้ถูกต้อง"></div>
+      <div class="f"><div class="fl">จำนวนพยัญชนะ</div><select id="c_cons_count">
+        <option value="44" selected>ครบ 44 ตัว ก-ฮ</option>
+        <option value="20">20 ตัวแรก ก-น</option>
+        <option value="24">24 ตัว ก-ท</option>
+      </select></div>
+      <div class="f"><div class="fl">สไตล์ภาพ</div><select id="c_img_style">
+        <option value="cartoon" selected>การ์ตูน 2D สีสัน</option>
+        <option value="bw">ลายเส้นขาวดำ (ระบายสีได้)</option>
+        <option value="realistic">3D / สมจริง</option>
+      </select></div>
+    </div>`,
+  thai_tracing_44:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core (ตามภาพตัวอย่าง):</strong><br>• กล่องมุมมน พยัญชนะเส้นประ ครบ 44 ตัว<br>• 6 คอลัมน์ × 7 แถว + แถวสุดท้าย 2 ตัว (อ ฮ)<br>• ลายเส้นขาวดำ ตกแต่งกรอบได้ ระบายสีได้</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="พยัญชนะไทย 44 ตัว"></div>
+      <div class="f"><div class="fl">ธีมตัวละครตกแต่งกรอบ</div><input type="text" id="c_frame_theme" placeholder="เช่น ลูกไก่น่ารัก, กระต่าย, หมีแพนด้า (ไม่ระบุ = ตามธีมที่เลือก)"></div>
+      <div class="f"><div class="fl">สไตล์กล่องพยัญชนะ</div><select id="c_box_style">
+        <option value="dotted" selected>เส้นประล้วน (ฝึกเขียนตาม)</option>
+        <option value="solid">ตัวทึบ (ดูแบบ)</option>
+      </select></div>
+    </div>`,
+  tracing_full:`
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core: โปสเตอร์ความรู้ (ยึดตาม CSV ภาษาไทย)</strong><br>• จัดวางตรงกลางแบบตาราง 8 แถว<br>• เรียงพยัญชนะ ก-ฮ ครบ 44 ตัว (ตามลำดับเป๊ะๆ)<br>• แต่ละกล่องมี ตัวอักษร + ภาพประกอบ + คำอ่าน</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อเรื่องหลัก</div><input type="text" id="c_title" value="พยัญชนะไทย 44 ตัว ก-ฮ"></div>
+      <div class="f"><div class="fl">คำโปรย (Subtitle)</div><input type="text" id="c_instr" value="เรียนรู้พยัญชนะไทย"></div>
+    </div>`,
+  fillin:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• เลือกจำนวนโจทย์ได้สูงสุด 7 ข้อ<br>• Word Bank จะอยู่ด้านบน</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="เติมคำในช่องว่าง"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนนำคำที่กำหนดให้ มาเติมลงในช่องว่างให้ถูกต้อง"></div>
+      <div class="f"><div class="fl">Word Bank (คั่นด้วย , )</div><input type="text" id="c_wb" placeholder="เช่น ดิน, น้ำ, อากาศ, แสงแดด"></div>
+      <div class="f"><div class="fl">จำนวนข้อ (สูงสุด 7 ข้อ)</div>
+        <select id="c_fillnum" onchange="buildFillinUI()">
+          <option value="1">1 ข้อ</option><option value="2">2 ข้อ</option><option value="3">3 ข้อ</option>
+          <option value="4">4 ข้อ</option><option value="5" selected>5 ข้อ</option>
+          <option value="6">6 ข้อ</option><option value="7">7 ข้อ</option>
+        </select></div>
+      <div id="fillin_container"></div>
+    </div>`,
+  matching:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• ห้ามมี label/caption ใต้ภาพ<br>• ไม่มีเส้นวาดล่วงหน้า • คำ/ภาพขวาใน shape</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="จับคู่ภาพกับคำ"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนโยงเส้นจับคู่ให้ถูกต้อง"></div>
+      <div class="g2">
+        <div class="f"><div class="fl">ฝั่งซ้าย (1/บรรทัด)</div><textarea id="c_left" rows="6" placeholder="ภาพ/คำ 1&#10;ภาพ/คำ 2&#10;ภาพ/คำ 3&#10;ภาพ/คำ 4&#10;ภาพ/คำ 5"></textarea></div>
+        <div class="f"><div class="fl">ฝั่งขวา (สลับ)</div><textarea id="c_right" rows="6" placeholder="คู่ 3&#10;คู่ 1&#10;คู่ 5&#10;คู่ 2&#10;คู่ 4"></textarea></div>
+      </div>
+    </div>`,
+  mcq:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• การ์ดคำถาม ก ข ค ง ไม่มีเฉลยล่วงหน้า<br>• กล่อง [ ] หน้าตัวเลือกให้นักเรียนกากบาท</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="อ่านคำถาม-เลือกตอบ"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="อ่านคำถามแล้วกากบาททับคำตอบที่ถูกต้องที่สุดเพียงข้อเดียว"></div>
+      <div class="f"><div class="fl">จำนวนข้อ</div><select id="c_qnum" onchange="buildMcqUI()"><option value="4">4 ข้อ</option><option value="5" selected>5 ข้อ</option><option value="6">6 ข้อ</option><option value="8">8 ข้อ</option></select></div>
+      <div id="mcq_container"></div>
+    </div>`,
+  classify:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• 3×3 = 9 ช่อง วงกลม ✓ หรือ ✗ ว่างเปล่า</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="จำแนกประเภท"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนทำเครื่องหมาย ✓ หน้าภาพที่ใช่ และ ✗ หน้าภาพที่ไม่ใช่"></div>
+      <div class="f"><div class="fl">เกณฑ์การจำแนก</div><input type="text" id="c_criteria" placeholder="เช่น สิ่งมีชีวิต, สัตว์เลี้ยง, อาหารเป็นประโยชน์"></div>
+      <div class="f"><div class="fl">9 รายการ (1/บรรทัด)</div><textarea id="c_items" rows="5" placeholder="นก&#10;กระรอก&#10;โต๊ะ&#10;ดอกไม้&#10;แอปเปิ้ล&#10;แมลงวัน&#10;เค้ก&#10;โซฟา&#10;ยีราฟ"></textarea></div>
+    </div>`,
+  observe:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• ภาพ scene/ecosystem ขนาดใหญ่กลางใบงาน<br>• 12 ช่องว่างเขียนชื่อ (3×4) ใต้ภาพ</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="สังเกตและเขียนชื่อ"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนสังเกตภาพและเขียนชื่อสิ่งที่พบให้ครบ"></div>
+      <div class="f"><div class="fl">ฉาก/สิ่งที่แสดงในภาพ</div><input type="text" id="c_scene" placeholder="เช่น ป่าและระบบนิเวศ, สวนสัตว์, ท้องทะเล"></div>
+      <div class="f"><div class="fl">สิ่งที่ต้องหา 12 อย่าง (1/บรรทัด)</div><textarea id="c_items" rows="7" placeholder="นกฮูก&#10;นกสีน้ำเงิน&#10;ลิง&#10;กระรอก&#10;โคอาลา&#10;กบ&#10;เต่า&#10;กระต่าย&#10;ช้าง&#10;หมีแพนด้า&#10;กวาง&#10;แมวน้ำ"></textarea></div>
+    </div>`,
+  diagram_label:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• ภาพกลาง + ลูกศร + ช่องว่าง + Word Bank<br>• ช่องว่าง 100% ห้ามมีเฉลย</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="ส่วนต่างๆของ..."></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนนำข้อความที่กำหนดให้ไปใส่ในช่องว่างให้ถูกต้อง"></div>
+      <div class="f"><div class="fl">ภาพที่ใช้ (อธิบายเป็น EN)</div><input type="text" id="c_scene" placeholder="เช่น potted plant, human body, bird, computer"></div>
+      <div class="f"><div class="fl">Word Bank (คั่น ,)</div><input type="text" id="c_wb" placeholder="เช่น ดอก, ใบ, ผล, ลำต้น, ราก"></div>
+      <div class="f"><div class="fl">จำนวน Label Boxes</div><select id="c_boxes"><option value="3">3 ช่อง</option><option value="4">4 ช่อง</option><option value="5" selected>5 ช่อง</option><option value="6">6 ช่อง</option></select></div>
+      <div class="f"><div class="fl">Arrow Labels (ตำแหน่ง: ชื่อส่วน)</div><textarea id="c_arrows" rows="4" placeholder="upper left: ดอก&#10;upper right: ใบ&#10;middle left: ผล&#10;middle right: ลำต้น&#10;bottom center: ราก"></textarea></div>
+    </div>`,
+  habitat_match:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• 2 คอลัมน์: ภาพสัตว์ ← โยงเส้น → ที่อยู่อาศัย<br>• ห้ามมี label ใต้ภาพทั้งสองฝั่ง</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="จับคู่สัตว์กับที่อยู่อาศัย"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนโยงเส้นจับคู่สัตว์กับที่อยู่อาศัยที่เหมาะสม"></div>
+      <div class="g2">
+        <div class="f"><div class="fl">สัตว์ฝั่งซ้าย</div><textarea id="c_left" rows="6" placeholder="ปลา&#10;นก&#10;สุนัข&#10;กบ&#10;ม้า"></textarea></div>
+        <div class="f"><div class="fl">ที่อยู่ฝั่งขวา (สลับ)</div><textarea id="c_right" rows="6" placeholder="บ้าน&#10;แม่น้ำ&#10;ทุ่งหญ้า&#10;ต้นไม้&#10;บ่อน้ำ"></textarea></div>
+      </div>
+    </div>`,
+  coloring:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• ภาพลายเส้นขาวดำ ไม่มีสี สำหรับระบายสี</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="ระบายสีภาพ"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนระบายสีภาพให้สวยงาม"></div>
+      <div class="f"><div class="fl">อธิบายภาพ (Image Description)</div><textarea id="c_scene" rows="4" placeholder="เช่น ภาพสัตว์ป่าในระบบนิเวศ มีสิงโต ช้าง ลิง"></textarea></div>
+    </div>`,
+  matsak_pic:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• 3×4 = 12 ช่อง สลับลำดับ ≠ Word Bank</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">มาตรา</div><select id="c_matra"><option>มาตรา กง</option><option>มาตรา กน</option><option>มาตรา กม</option><option>มาตรา เกย</option><option>มาตรา เกอว</option><option>มาตรา กก</option><option>มาตรา กบ</option><option>มาตรา กด</option></select></div>
+      <div class="f"><div class="fl">Word Bank (12 คำ คั่น ,)</div><textarea id="c_wb" rows="3" placeholder="ลิง, ยุง, กางเกง, ธง, ช้าง...">ลิง, ยุง, กางเกง, ธง, ช้าง, กุ้ง, แตง, กลอง, ถัง, ผึ้ง, วัง, กาง</textarea></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ดูคำในคลังคำ แล้วเติมคำให้ตรงกับภาพ"></div>
+    </div>`,
+  cons_check:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• ภาพ + 5 ตัวเลือก + ช่อง ✓ ว่างเปล่า • 5 แถว</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="เลือกพยัญชนะต้นของคำ"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนเติมเครื่องหมายถูก ✓ ที่พยัญชนะตัวต้นของคำที่ตรงกับภาพ"></div>
+      <div class="f"><div class="fl">โจทย์ (ภาพ | ก ข ค ง จ)</div><textarea id="c_rows" rows="6" placeholder="ปลา | บ ผ ป ฟ พ">ปลา | บ ผ ป ฟ พ
+งู | น ค ล ท ง
+เด็กหญิง | ด ญ น ณ ฒ
+ว่าว | พ ฟ ว ผ ฝ
+ขวด | ข ช ซ ง ก</textarea></div>
+    </div>`,
+  vowel_comb:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• 3 วงกลม [พยัญชนะ]+[สระ]+[พยัญชนะ] → ช่องเขียน</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="ประสมสระในภาษาไทย"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ฝึกอ่านประสมสระ และเขียนคำลงในช่องว่างให้ถูกต้อง"></div>
+      <div class="f"><div class="fl">โจทย์ 6 แถว</div><textarea id="c_rows" rows="7" placeholder="ก + แ- + ง">ก + แ- + ง
+ด + โ- + ด
+ย + -า + ง
+ล + -ุ + ก
+ร + เ-ีย + ก
+ผ + เ-ือ + ก</textarea></div>
+    </div>`,
+  pic_combo:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• ภาพ1 + สระ + ภาพ2 + สระ = ช่องเขียน • 5 แถว</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="ประสมคำจากภาพ"></div>
+      <div class="f"><div class="fl">โจทย์ 5 แถว</div><textarea id="c_rows" rows="6" placeholder="ศาลา + ลา + า">ศาลา + ลา + า
+เด็ก + า + เรือ + า
+แหวน + -า + จาน + า
+เรือ + -า + ควาย + า
+ม้า + -า + หนู + า</textarea></div>
+    </div>`,
+  sent_build:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• ภาพ + คำสับ → เส้นเขียน 2–3 เส้น • 5 แถว</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="ฝึกแต่งประโยค"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนเรียงคำให้เป็นประโยคที่สมบูรณ์"></div>
+      <div class="f"><div class="fl">โจทย์ (ภาพ: อธิบาย | คำ/คำ/คำ)</div><textarea id="c_rows" rows="6" placeholder="ปลาในน้ำ | น้ำ / ปลา / ใน / อยู่">เด็กอ่านหนังสือ | หนังสือ / อ่าน / เด็ก / กำลัง
+แมวกินปลา | ปลา / กิน / แมว / กำลัง
+หมาวิ่งในสวน | วิ่ง / สวน / ใน / หมา
+ครูสอนนักเรียน | ครู / นักเรียน / สอน / กำลัง
+เด็กเล่นฟุตบอล | ฟุตบอล / เล่น / เด็ก / กำลัง</textarea></div>
+    </div>`,
+  add_list:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• 2 คอลัมน์ × 20 ข้อ วงกลมเลขข้อ</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="การบวกเลข"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนหาผลบวกแล้วเติมคำตอบให้ถูกต้อง"></div>
+      <div class="f"><div class="fl">โจทย์ 20 ข้อ</div><textarea id="c_problems" rows="10" placeholder="2 + 4&#10;7 + 1...">2 + 4
+7 + 1
+1 + 9
+3 + 6
+5 + 2
+0 + 1
+4 + 5
+2 + 3
+6 + 4
+3 + 7
+9 + 1
+1 + 2
+2 + 2
+6 + 3
+1 + 8
+8 + 1
+4 + 4
+2 + 7
+5 + 3
+3 + 6</textarea></div>
+    </div>`,
+  add_branch:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• 4 กล่อง 2×2: เลขหลัก → ลูกศร 4 เส้น → ⬜</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="การบวกเลข"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="จงหาผลรวมและเติมคำตอบที่ถูกต้องลงในช่องว่าง"></div>
+      <div class="f"><div class="fl">4 กล่อง (เลขหลัก : ตัวบวก1,2,3,4)</div><textarea id="c_boxes" rows="4" placeholder="7 : 3,5,4,2">7 : 3,5,4,2
+6 : 3,5,4,2
+8 : 3,5,4,2
+9 : 3,5,4,2</textarea></div>
+    </div>`,
+  add_card:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• 3×3 = 9 การ์ดมุมมน ตั้งเลขแนวตั้ง</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="การบวกเลข"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนเติมคำตอบลงในช่องว่างให้ถูกต้อง"></div>
+      <div class="f"><div class="fl">โจทย์ 9 ข้อ</div><textarea id="c_problems" rows="5" placeholder="2 + 3&#10;5 + 1...">2 + 3
+5 + 1
+3 + 4
+6 + 2
+1 + 7
+4 + 4
+2 + 6
+3 + 5
+7 + 2</textarea></div>
+    </div>`,
+  sub_list:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• 2 คอลัมน์ × 20 ข้อ</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="การลบเลข"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนหาผลลบแล้วเติมคำตอบให้ถูกต้อง"></div>
+      <div class="f"><div class="fl">โจทย์ 20 ข้อ</div><textarea id="c_problems" rows="10" placeholder="5 - 2...">10 - 2
+9 - 3
+7 - 4
+15 - 5
+8 - 1
+12 - 4
+20 - 10
+11 - 2
+6 - 3
+14 - 7
+13 - 5
+16 - 8
+18 - 9
+17 - 6
+19 - 4
+11 - 3
+14 - 5
+12 - 7
+10 - 5
+15 - 8</textarea></div>
+    </div>`,
+  sub_card:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• 3×3 = 9 การ์ดมุมมน</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="การลบเลข"></div>
+      <div class="f"><div class="fl">โจทย์ 9 ข้อ</div><textarea id="c_problems" rows="5" placeholder="5 - 2...">15 - 5
+8 - 1
+12 - 4
+20 - 10
+11 - 2
+6 - 3
+14 - 7
+9 - 5
+10 - 6</textarea></div>
+    </div>`,
+  compare_grid:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• 2 คอลัมน์ × 16 ข้อ ช่อง ⬜ สำหรับ > < =</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="การเปรียบเทียบจำนวน"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="จงใส่เครื่องหมาย > < = ให้ถูกต้อง"></div>
+      <div class="f"><div class="fl">โจทย์ 16 ข้อ (เลข1 vs เลข2)</div><textarea id="c_problems" rows="8" placeholder="27 vs 21">27 vs 21
+23 vs 30
+18 vs 18
+21 vs 22
+17 vs 20
+24 vs 24
+1 vs 5
+30 vs 26
+6 vs 4
+26 vs 24
+7 vs 2
+3 vs 3
+13 vs 8
+15 vs 12
+28 vs 28
+9 vs 11</textarea></div>
+    </div>`,
+  trace_num:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• เลข 0–9 เส้นประล้วน ไม่มีตัวอย่างทึบ</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="เขียนตัวเลขตามรอย 0–9"></div>
+      <div class="f"><div class="fl">จำนวนซ้ำ/ตัวเลข</div><select id="c_repeat"><option>3</option><option selected>5</option><option>7</option></select></div>
+    </div>`,
+  count_obj:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• ภาพสิ่งของ → นับ → เขียนจำนวน • ช่องตัวเลขว่างเปล่า</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="นับแล้วเขียนจำนวน"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="ให้นักเรียนนับสิ่งของแล้วเขียนตัวเลขลงในช่องว่าง"></div>
+    </div>`,
+  eng_tracing:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• ย่อส่วนกลางลง เปิดทางให้กรอบตกแต่งได้<br>• คำศัพท์ตัวอย่างแสดงอัตโนมัติตามตัวอักษรที่เลือก</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="g2">
+        <div class="f"><div class="fl">ตัวอักษร</div><select id="c_letter" onchange="autoFillWord()">
+          <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+          <option>F</option><option>G</option><option>H</option><option>I</option><option>J</option>
+          <option>K</option><option>L</option><option>M</option><option>N</option><option>O</option>
+          <option>P</option><option>Q</option><option>R</option><option>S</option><option>T</option>
+          <option>U</option><option>V</option><option>W</option><option>X</option><option>Y</option><option selected>Z</option>
+        </select></div>
+      </div>
+      <div class="f"><div class="fl">คำศัพท์ตัวอย่าง (อัตโนมัติ / แก้ไขได้)</div><input type="text" id="c_word" value="Z is for Zebra"></div>
+      <div class="f"><div class="fl">สีตัวอย่าง accent</div><input type="text" id="c_accent" value="black"></div>
+    </div>`,
+  eng_tracing_full:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core (อัปเดต):</strong><br>• A–Z ครบ 26 ตัว ในแผ่นเดียว<br>• ตัวอักษรเส้นประขนาดเล็กลง จัด Grid 5×5+1 เหมือนภาพตัวอย่าง<br>• ภาพลายเส้นขาวดำ ระบายสีได้ กรอบตกแต่งได้</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">รูปแบบตัวอักษร</div><select id="c_case">
+        <option value="both" selected>ทั้งคู่ Aa Bb Cc</option>
+        <option value="upper">ตัวใหญ่ A B C เท่านั้น</option>
+        <option value="lower">ตัวเล็ก a b c เท่านั้น</option>
+      </select></div>
+      <div class="f"><div class="fl">ธีมตกแต่งกรอบนอก</div><input type="text" id="c_frame_theme" placeholder="เช่น บ้านน่ารัก, กระต่าย, ดาว (ไม่ระบุ = ตามธีมที่เลือก)"></div>
+    </div>`,
+  missing_az:`${HDR_CORE}
+    <div class="cbox" style="margin-top:8px"><strong>🔒 Core:</strong><br>• รูปทรงน่ารัก (แอปเปิ้ล/การ์ด) แต่ละช่องมีตัวอักษรบางตัว บางช่องว่าง<br>• นักเรียนเติมตัวอักษรที่หายไป<br>• กรอบตกแต่งภายนอกได้ด้วยธีมที่เลือก</div>
+    <div class="ubox" style="margin-top:8px"><div class="ubh">✏️ ปรับได้</div>
+      <div class="f"><div class="fl">ชื่อใบงาน</div><input type="text" id="c_title" value="A-Z จงเติมตัวอักษรที่หายไป"></div>
+      <div class="f"><div class="fl">คำสั่ง</div><input type="text" id="c_instr" value="จงเติมตัวอักษร A-Z ที่หายไปให้ครบถ้วน"></div>
+      <div class="f"><div class="fl">รูปทรงช่องใส่ตัวอักษร</div><select id="c_shape">
+        <option value="apple">🍎 แอปเปิ้ล (ตามภาพ 1)</option>
+        <option value="rounded">🟦 กล่องมุมมน</option>
+        <option value="star">⭐ ดาว</option>
+        <option value="cloud">☁️ เมฆ</option>
+        <option value="heart">💖 หัวใจ</option>
+      </select></div>
+      <div class="f"><div class="fl">ตัวอักษรที่ให้ไว้ (ส่วนที่เหลือจะเว้นว่าง)</div>
+        <div class="fh">ใส่ตัวอักษรที่ต้องการให้แสดง คั่นด้วย , เช่น a,c,d,g,j,l,n,p,s,t,v,x<br>ช่องว่าง = ตัวอักษรที่นักเรียนต้องเติม</div>
+        <input type="text" id="c_given" value="a,c,d,g,j,l,n,p,s,t,v,x">
+      </div>
+      <div class="f"><div class="fl">ตัวพิมพ์</div><select id="c_case_missing">
+        <option value="lower" selected>ตัวเล็ก (a b c)</option>
+        <option value="upper">ตัวใหญ่ (A B C)</option>
+      </select></div>
+    </div>`,
+};
+
+// ============================================================
+// GENERATE PROMPT
+// ============================================================
+function v(id){return document.getElementById(id)?.value?.trim()||'';}
+
+function doGen(){
+  // Final validate
+  if(!S.subj||!S.unit){showToast('ยังไม่ได้เลือกวิชาครับ ⚠️','err');return;}
+  if(!S.wsType){showToast('ยังไม่ได้เลือกรูปแบบใบงานครับ ⚠️','err');return;}
+  if(!S.theme){showToast('ยังไม่ได้เลือกธีมครับ ⚠️','err');return;}
+
+  const wm=v('wm');
+  const theme=THEMES.find(x=>x.id===S.theme)||THEMES[6];
+  const T=theme.val;
+  const strNo3D_bullet=S.theme==='pixar3d'?'':'- no 3D\n';
+  const showNum=document.getElementById('c_hasNum')?.checked;
+  const numVal=v('c_num')||'1';
+  const ribbonPrompt=showNum?`small ribbon: "ใบงานที่ ${numVal}"`:``;
+  const IMG_DIRECTIVE=`CREATE A SINGLE 2D IMAGE FOR PRINTING (DO NOT CREATE A PRESENTATION SLIDE).`;
+
+  const SKIN=`==================================================
+MASTER STYLE
+${T.s}
+==================================================
+TEXT LANGUAGE CONTROL
+Thai language only in text and instructions (unless specified)
+correct Thai spelling
+==================================================
+DECORATIVE ENHANCEMENT
+Border Theme: ${T.d}
+Background: ${T.b}
+Extra Elements: ${T.e}
+KEEP DECORATION ON THE OUTER EDGES ONLY - NEVER CLUTTER THE CENTER`;
+
+  const HDR_PROMPT=`==================================================
+TOP HEADER
+rounded rectangular student info box at top:
+  ชื่อ _____________ นามสกุล _____________
+  ชั้น _______ เลขที่ _______
+top right corner: score circle badge "คะแนน"`;
+
+  let prompt='';
+
+  function base(title,instr,activity,wm2=''){
+    return `${IMG_DIRECTIVE}
+Cute premium Thai educational worksheet activity page, topic "${title}", vertical A4 layout (210mm x 297mm), portrait orientation, print-ready 300 DPI.
+${SKIN}
+${HDR_PROMPT}
+==================================================
+CENTER TITLE
+${ribbonPrompt}
+large curved title banner: "${title}"
+==================================================
+INSTRUCTION BOX
+rounded cream box, pencil icon left:
+คำชี้แจง : ${instr}
+==================================================
+${activity}
+==================================================
+QUALITY
+A4 portrait | 300 DPI | ultra detailed | premium Thai worksheet | print-ready
+==================================================
+STRICT NEGATIVE
+- no pre-filled answers
+- no realistic style
+${strNo3D_bullet}${wm2?'- watermark: "'+wm2+'"':''}`;
+  }
+
+  function matching_prompt(title,instr,left,right,shape,wm2){
+    const L=(left||'').split('\n').filter(Boolean);
+    const R=(right||'').split('\n').filter(Boolean);
+    return base(title,instr,
+      `MATCHING RULE (CORE - STRICT)
+LEFT COLUMN (${L.length} items):
+${L.map((l,i)=>`${i+1}. illustration of "${l}" — NO text label under image`).join('\n')}
+CENTER: dot connection points (●) — clean empty space for drawing lines
+RIGHT COLUMN (${R.length} items in ${shape}):
+${R.map((r,i)=>`${i+1}. "${r}"`).join('\n')}
+STRICT NEGATIVE: NO text under images, NO pre-drawn match lines`,wm2);
+  }
+
+  // ── GENERATE BY TYPE ──
+  if(S.wsType==='thai_fill_consonant'){
+    const title=v('c_title')||'พยัญชนะไทย ก-ฮ';
+    const instr=v('c_instr')||'ให้นักเรียนเติมพยัญชนะไทยในช่องว่างให้ถูกต้อง';
+    const count=v('c_cons_count')||'44';
+    const imgStyle=v('c_img_style')||'cartoon';
+    const imgDesc=imgStyle==='bw'?'black and white line art, coloring book style, no color fills':
+                  imgStyle==='realistic'?'cute 3D realistic illustration, vibrant colors':
+                  'cute 2D cartoon illustration, bright colors, thick outline';
+    const cons44=[
+      {th:'ก',word:'ไก่'},{th:'ข',word:'ไข่'},{th:'ฃ',word:'ขวด'},{th:'ค',word:'ควาย'},
+      {th:'ฅ',word:'คน'},{th:'ฆ',word:'ระฆัง'},{th:'ง',word:'งู'},{th:'จ',word:'จาน'},
+      {th:'ฉ',word:'ฉิ่ง'},{th:'ช',word:'ช้าง'},{th:'ซ',word:'โซ่'},{th:'ฌ',word:'เฌอ'},
+      {th:'ญ',word:'หญิง'},{th:'ฎ',word:'ชฎา'},{th:'ฏ',word:'ปฏัก'},{th:'ฐ',word:'ฐาน'},
+      {th:'ฑ',word:'มณโฑ'},{th:'ฒ',word:'ผู้เฒ่า'},{th:'ณ',word:'เณร'},{th:'ด',word:'เด็ก'},
+      {th:'ต',word:'เต่า'},{th:'ถ',word:'ถุง'},{th:'ท',word:'ทหาร'},{th:'ธ',word:'ธง'},
+      {th:'น',word:'หนู'},{th:'บ',word:'ใบไม้'},{th:'ป',word:'ปลา'},{th:'ผ',word:'ผึ้ง'},
+      {th:'ฝ',word:'ฝา'},{th:'พ',word:'พาน'},{th:'ฟ',word:'ฟัน'},{th:'ภ',word:'สำเภา'},
+      {th:'ม',word:'ม้า'},{th:'ย',word:'ยักษ์'},{th:'ร',word:'เรือ'},{th:'ล',word:'ลิง'},
+      {th:'ว',word:'แหวน'},{th:'ศ',word:'ศาลา'},{th:'ษ',word:'ฤๅษี'},{th:'ส',word:'เสือ'},
+      {th:'ห',word:'หีบ'},{th:'ฬ',word:'จุฬา'},{th:'อ',word:'อ่าง'},{th:'ฮ',word:'นกฮูก'},
+    ];
+    const selected=count==='20'?cons44.slice(0,20):count==='24'?cons44.slice(0,24):cons44;
+    const rows=[];
+    for(let i=0;i<selected.length;i+=4){
+      const row=selected.slice(i,i+4).map((c,j)=>`[col${j+1}: icon of "${c.word}" LEFT | dotted line "............" RIGHT]`).join(' | ');
+      rows.push(`Row ${Math.floor(i/4)+1}: ${row}`);
+    }
+
+    prompt=`${IMG_DIRECTIVE}
+Thai educational worksheet "เติมพยัญชนะไทยในช่องว่าง", vertical A4 (210mm × 297mm), 300 DPI.
+==================================================
+OVERALL STYLE
+Clean white background — NO decorative border frame, NO outer decoration
+Minimalist educational worksheet style — ready to print
+${imgDesc}
+==================================================
+TOP SECTION (COMPACT)
+Student info box (small, top): ชื่อ ________ นามสกุล ________ ชั้น ____ เลขที่ ____
+Score circle top-right: "คะแนน"
+Title banner (small): "${title}" with location pin icon 📍 on left
+Instruction line: คำชี้แจง ✋ ${instr}
+==================================================
+MAIN GRID — 4 COLUMNS × ${Math.ceil(selected.length/4)} ROWS (CRITICAL LAYOUT)
+
+EACH CELL STRUCTURE (left-to-right):
+[Rounded square icon box — LEFT SIDE] + [Dotted writing line "............" — RIGHT SIDE]
+- Icon box: small rounded square ~20mm, thick black outline, illustration inside
+- Writing line: "............" dotted line next to the icon, long enough to write 2-3 characters
+- SECOND dotted line below if needed for more writing space
+- NO number badge needed
+- NO text label under or beside illustration
+
+4 COLUMNS per row, compact spacing to fit all ${selected.length} items on ONE A4 page
+
+ITEMS IN ORDER (left to right, top to bottom):
+${selected.map((c,i)=>`${i+1}. icon="${c.word}" (answer: ${c.th})`).join(', ')}
+
+LAYOUT PER ROW (4 items each):
+${rows.join('\n')}
+
+CELL SIZING: approximately 45-48mm wide × 12-14mm tall per cell
+Rows separated by thin light grey line
+==================================================
+ILLUSTRATION STYLE
+${imgDesc}
+Each illustration: recognizable, simple, centered inside the rounded square box
+Illustrations only — NO Thai text inside or beside the boxes
+==================================================
+BOTTOM
+Pencil/crayon decoration (small, bottom-left corner only)
+${wm?'Watermark text bottom: "'+wm+'"':''}
+==================================================
+STRICT NEGATIVE
+- NO Thai consonant letters printed anywhere in the grid (student fills in)
+- NO decorative border frame around the whole page
+- NO large title banners — keep top section compact
+- NO color background — white only
+- Dotted lines must be clearly visible for writing`;
+  }
+  else if(S.wsType==='thai_tracing_44'){
+    const title=v('c_title')||'พยัญชนะไทย 44 ตัว';
+    const frameTheme=v('c_frame_theme')||'';
+    const boxStyle=v('c_box_style')||'dotted';
+    const isDotted=boxStyle==='dotted';
+
+    prompt=`${IMG_DIRECTIVE}
+Educational Thai alphabet tracing worksheet, ALL 44 Thai consonants ก-ฮ, vertical A4 (210mm × 297mm), 300 DPI.
+==================================================
+OVERALL STYLE
+Black and white LINE ART only — NO color fills, NO shading
+Suitable for coloring + tracing practice
+Clean professional educational style
+==================================================
+OUTER FRAME / DECORATION (IMPORTANT)
+${frameTheme?`Cute "${frameTheme}" characters as outer frame decoration — black and white line art, coloring book style`:`${T.d} — black and white cute line art, coloring book style`}
+Decorative characters/elements sit at CORNERS and SIDES outside the grid
+Bottom corners: 2 cute character illustrations (line art, no fill)
+All decorations are BLACK AND WHITE only — no color
+==================================================
+TOP TITLE
+Title: "${title}"
+Bold Thai font, centered at top
+==================================================
+MAIN CONSONANT GRID (CRITICAL — MUST BE EXACT)
+Layout: 6 columns × 7 rows = 42 boxes + last row 2 centered boxes = 44 total
+Each box: rounded square, thick black outline, compact size (~13mm each to fit all on A4)
+
+${isDotted?'Letter style: DOTTED TRACING font — letter formed by dots only, NO solid fill':'Letter style: SOLID bold Thai font — clear and readable'}
+
+EXACT ORDER — DO NOT CHANGE OR SKIP ANY:
+Row 1: ก  ข  ฃ  ค  ฅ  ฆ
+Row 2: ง  จ  ฉ  ช  ซ  ฌ
+Row 3: ญ  ฎ  ฏ  ฐ  ฑ  ฒ
+Row 4: ณ  ด  ต  ถ  ท  ธ
+Row 5: น  บ  ป  ผ  ฝ  พ
+Row 6: ฟ  ภ  ม  ย  ร  ล
+Row 7: ว  ศ  ษ  ส  ห  ฬ
+Row 8 (2 boxes, centered): อ  ฮ
+
+TOTAL: exactly 44 boxes — NO letter missing, NO wrong order
+==================================================
+STRICT NEGATIVE
+- NO color fills anywhere
+- NO missing consonants — all 44 must appear in correct order
+- ${isDotted?'NO solid black letter fills — dotted only':''}
+- Boxes must be COMPACT — not oversized
+${wm?'- footer watermark: "'+wm+'"':''}`;
+  }
+  else if(S.wsType==='tracing_full'){
+    const title=v('c_title')||'พยัญชนะไทย 44 ตัว ก-ฮ';
+    const sub=v('c_instr')||'เรียนรู้พยัญชนะไทย';
+    prompt=`${IMG_DIRECTIVE}
+Cute premium Thai educational infographic poster, topic "${title}", A4 vertical layout (210mm x 297mm), portrait, print-ready 300 DPI
+${SKIN}
+TEXT LANGUAGE CONTROL
+Thai language only | correct Thai spelling | no English
+==================================================
+TOP HEADER
+MAIN TITLE: ${title}
+large colorful curved banner, thick white outline, child-friendly Thai font
+subtitle: ${sub}
+==================================================
+MAIN GRID STRUCTURE (VERY IMPORTANT)
+Create EXACTLY 8 horizontal rows. DO NOT randomize. DO NOT repeat. DO NOT omit.
+Each consonant inside one rounded square tile with: large Thai letter + small picture + Thai label
+----------------------------------
+ROW 1 (6 boxes): ก ไก่, ข ไข่, ฃ ขวด, ค ควาย, ฅ คน, ฆ ระฆัง
+ROW 2 (6 boxes): ง งู, จ จาน, ฉ ฉิ่ง, ช ช้าง, ซ โซ่, ฌ เฌอ
+ROW 3 (6 boxes): ญ หญิง, ฎ ชฎา, ฏ ปฏัก, ฐ ฐาน, ฑ มณโฑ, ฒ ผู้เฒ่า
+ROW 4 (6 boxes): ณ เณร, ด เด็ก, ต เต่า, ถ ถุง, ท ทหาร, ธ ธง
+ROW 5 (6 boxes): น หนู, บ ใบไม้, ป ปลา, ผ ผึ้ง, ฝ ฝา, พ พาน
+ROW 6 (6 boxes): ฟ ฟัน, ภ สำเภา, ม ม้า, ย ยักษ์, ร เรือ, ล ลิง
+ROW 7 (6 boxes): ว แหวน, ศ ศาลา, ษ ฤๅษี, ส เสือ, ห หีบ, ฬ จุฬา
+ROW 8 (2 boxes, centered): อ อ่าง, ฮ นกฮูก
+==================================================
+STRICT NEGATIVE
+no Roman letters | no black and white | no dull colors | ${wm?'footer watermark: "'+wm+'"':''}`;
+  }
+  else if(S.wsType==='eng_tracing'){
+    const letter=v('c_letter')||'Z';
+    const word=v('c_word')||VOCAB_MAP[letter]||`${letter} is for ...`;
+    const accent=v('c_accent')||'black';
+    const exampleWord=word.split(' ').slice(-1)[0];
+    prompt=`${IMG_DIRECTIVE}
+Educational English handwriting worksheet for kids, letter "${letter}" tracing practice, vertical A4 layout, 300 DPI.
+${HDR_PROMPT}
+==================================================
+DECORATIVE ENHANCEMENT (OUTER MARGIN ONLY — COLORING STYLE)
+Theme: ${T.d}
+KEEP ALL DECORATIONS STRICTLY ON THE OUTER BORDER EDGES ONLY
+CENTER area must stay CLEAN WHITE for writing practice
+All decoration = black and white line art (coloring book style, no fill color)
+==================================================
+MAIN LETTER SECTION (TOP CENTER)
+large uppercase and lowercase: ${letter}  ${letter.toLowerCase()}
+include directional arrows showing stroke order
+==================================================
+WORD EXAMPLE
+"${word}" — highlight word "${exampleWord}" in ${accent} color
+simple cute 2D illustration of "${exampleWord}" on the right side
+==================================================
+TRACING SECTION
+1. Dotted uppercase row: ${letter.repeat(7)}
+2. Dotted lowercase row: ${letter.toLowerCase().repeat(7)}
+3. Alternating uppercase+lowercase row: ${(letter+letter.toLowerCase()).repeat(3)}
+LINE STYLE: dotted tracing lines, light grey, 3-line guide system (top/mid/base)
+FOOTER: 2 extra blank tracing rows for free practice
+${wm?'footer watermark text: "'+wm+'"':''}
+==================================================
+STRICT NEGATIVE: no solid filled letters, no color fills inside tracing zone, no decoration overlapping practice area`;
+  }
+  else if(S.wsType==='fillin'){
+    const n=parseInt(v('c_fillnum')||5);
+    let questions=[];
+    for(let i=1;i<=n;i++){
+      const q=v(`fill_q_${i}`)||`ข้อ ${i} ............................`;
+      questions.push(`${i}. ${q}`);
+    }
+    prompt=base(v('c_title')||'เติมคำในช่องว่าง',v('c_instr'),
+      `WORD BANK (CORE)
+rounded strip at the top: ${v('c_wb')||'auto-generate words'}
+
+ACTIVITY AREA — exactly ${n} sentences with blank line "__________"
+NO pre-filled answers
+
+CONTENT:
+${questions.join('\n')}
+
+LAYOUT: comfortable writing space, scale down if needed`,wm);
+  }
+  else if(S.wsType==='matching'){
+    prompt=matching_prompt(v('c_title'),v('c_instr'),v('c_left'),v('c_right'),'cloud/bubble shapes',wm);
+  }
+  else if(S.wsType==='mcq'){
+    const n=parseInt(v('c_qnum')||5);
+    let cards=[];
+    for(let i=1;i<=n;i++){
+      const q=v(`mcq_q_${i}`)||`คำถามข้อที่ ${i}?`;
+      const c1=v(`mcq_c_${i}_1`)||'ตัวเลือก ก';
+      const c2=v(`mcq_c_${i}_2`)||'ตัวเลือก ข';
+      const c3=v(`mcq_c_${i}_3`)||'ตัวเลือก ค';
+      const c4=v(`mcq_c_${i}_4`)||'ตัวเลือก ง';
+      cards.push(`CARD ${i}: ${q}\n  [ ] ก. ${c1}\n  [ ] ข. ${c2}\n  [ ] ค. ${c3}\n  [ ] ง. ${c4}`);
+    }
+    prompt=base(v('c_title')||'อ่านคำถาม-เลือกตอบ',v('c_instr'),
+      `QUESTION LAYOUT: EXACTLY ${n} cards
+Card style: cream rounded, brown outline
+Each card: question text + 4 choices (ก ข ค ง) + rounded square box [ ] in front of each choice
+
+${cards.join('\n\n')}
+
+STRICT: NO answer marked. All [ ] boxes completely empty.`,wm);
+  }
+  else if(S.wsType==='classify'){
+    const items=(v('c_items')||'').split('\n').filter(Boolean);
+    prompt=base(v('c_title')||'จำแนกประเภท',v('c_instr'),
+      `CRITERIA: ${v('c_criteria')||'auto'}
+ACTIVITY GRID: 3×3 = 9 items
+Each: number badge + cute illustration + Thai label + blank circle for ✓/✗
+${items.map((it,i)=>`${i+1}. ${it}`).join('\n')||'auto-generate 9 items'}
+ALL CIRCLES EMPTY`,wm);
+  }
+  else if(S.wsType==='observe'){
+    const items=(v('c_items')||'').split('\n').filter(Boolean);
+    prompt=base(v('c_title')||'สังเกตและเขียนชื่อ',v('c_instr'),
+      `MAIN SCENE (LARGE CENTER): ${v('c_scene')||'natural ecosystem'}
+NO text labels on items in scene
+
+Items to find:
+${items.map((it,i)=>`${i+1}. ${it}`).join('\n')||'auto-generate 12 items'}
+
+ANSWER BOXES: 3×4 = 12 blank rounded rectangles, ALL EMPTY`,wm);
+  }
+  else if(S.wsType==='diagram_label'){
+    const wb=v('c_wb'); const arrows=v('c_arrows'); const boxes=v('c_boxes')||'5';
+    prompt=base(v('c_title')||'ส่วนต่างๆ',v('c_instr'),
+      `WORD BANK: rounded strip: ${wb||'auto-generate'} (${boxes} words)
+
+MAIN DIAGRAM: ${v('c_scene')||'educational diagram'}
+
+BLANK LABEL BOXES + ARROWS (STRICT)
+Exactly ${boxes} blank boxes — ALL EMPTY
+${arrows?arrows.split('\n').filter(Boolean).join('\n'):'auto-position arrows'}
+Arrows point correctly, NO crossing, NO text beside arrows
+
+STRICT NEGATIVE: no pre-filled boxes`,wm);
+  }
+  else if(S.wsType==='habitat_match'){
+    const L=(v('c_left')||'').split('\n').filter(Boolean);
+    const R=(v('c_right')||'').split('\n').filter(Boolean);
+    prompt=base(v('c_title')||'จับคู่สัตว์กับที่อยู่อาศัย',v('c_instr'),
+      `MATCHING AREA (STRICT)
+LEFT: animal pictures ONLY (NO text labels)
+${L.map((l,i)=>`${i+1}. illustration of "${l}" — NO label`).join('\n')||'auto-generate 5 animals'}
+
+CENTER: dot points (●) for lines
+
+RIGHT: habitat pictures ONLY (NO text labels)
+${R.map((r,i)=>`${i+1}. illustration of "${r}" — NO label`).join('\n')||'auto-generate 5 habitats'}
+
+NO pre-drawn lines`,wm);
+  }
+  else if(S.wsType==='coloring'){
+    const langCtrl=(S.subj==='eng')
+      ?'MAIN TITLE can be in English.\nStudent info box and Instructions MUST be in THAI.'
+      :'THAI LANGUAGE ONLY for all text.';
+    prompt=`${IMG_DIRECTIVE}
+Educational infographic worksheet, topic "${v('c_title')}", vertical A4 (210mm x 297mm), 300 DPI.
+==================================================
+MASTER STYLE (STRICT LINE ART)
+style: minimal clean line art, thin to medium outlines, professional educational infographic style, white background, NO color, NO gradients, NO shading
+==================================================
+TEXT LANGUAGE CONTROL
+${langCtrl}
+==================================================
+${HDR_PROMPT}
+==================================================
+CENTER TITLE
+${ribbonPrompt}
+large curved title banner: "${v('c_title')}"
+==================================================
+INSTRUCTION BOX
+คำชี้แจง : ${v('c_instr')}
+==================================================
+MAIN SCENE (CENTER VISUAL)
+${v('c_scene')||'Educational scene related to topic'}
+==================================================
+STRICT NEGATIVE
+black and white ONLY — no grayscale, no shadows, no color, no lighting effects
+high detail, sharp clean lines, infographic quality, print-ready${wm?'\nwatermark: "'+wm+'"':''}`;
+  }
+  else if(S.wsType==='matsak_pic'){
+    const matra=v('c_matra')||'มาตรา กง';
+    const wbArr=(v('c_wb')||'ลิง,ยุง,กางเกง,ธง,ช้าง,กุ้ง,แตง,กลอง,ถัง,ผึ้ง,วัง,กาง').split(',').map(w=>w.trim());
+    prompt=`${IMG_DIRECTIVE}
+Cute premium Thai educational worksheet, topic "${matra}", A4 vertical, 300 DPI
+${SKIN}
+${HDR_PROMPT}
+==================================================
+CENTER TITLE: "${ribbonPrompt}" "มาตราตัวสะกด ${matra}"
+INSTRUCTION: คำชี้แจง : ${v('c_instr')||'ดูคำในคลังคำ แล้วเติมคำให้ตรงกับภาพ'}
+WORD BANK: ${wbArr.slice(0,6).join(', ')} | ${wbArr.slice(6).join(', ')}
+ACTIVITY GRID: 3×4 = 12 cards RANDOMIZED ORDER — each: number badge + illustration (NO text) + blank answer box
+Images: ${wbArr.map((w,i)=>`${i+1}.${w}`).join(', ')}
+STRICT NEGATIVE: no sequential matching, no filled answers${wm?'\nwatermark: '+wm:''}`;
+  }
+  else if(S.wsType==='cons_check'){
+    const rows=(v('c_rows')||'').split('\n').filter(Boolean);
+    prompt=base(v('c_title')||'เลือกพยัญชนะต้น',v('c_instr'),
+      `5 ROWS — each: LEFT illustration (NO label) | RIGHT: 5 Thai consonants + empty ✓ checkbox
+${rows.map((r,i)=>{const[img,ch]=(r+'|').split('|');return `Row ${i+1}: image of "${img.trim()}" — choices: ${ch?.trim()}`;}).join('\n')}
+ALL CHECKBOXES EMPTY`,wm);
+  }
+  else if(S.wsType==='vowel_comb'){
+    const rows=(v('c_rows')||'').split('\n').filter(Boolean);
+    prompt=base(v('c_title')||'ประสมสระ',v('c_instr'),
+      `6 ROWS — each: [Circle:cons] + [Circle:vowel] + [Circle:cons] → blank lines
+${rows.map((r,i)=>`Row ${i+1}: ${r}`).join('\n')}
+Circles: white, thick outline, equal size, + between
+NO pre-written answers`,wm);
+  }
+  else if(S.wsType==='pic_combo'){
+    const rows=(v('c_rows')||'').split('\n').filter(Boolean);
+    prompt=base(v('c_title')||'ประสมคำจากภาพ','ให้นักเรียนเขียนพยัญชนะจากภาพ แล้วนำมาประสมคำ',
+      `5 ROWS — each: [Image1] + vowel + [Image2] + vowel = blank lines — NO labels
+${rows.map((r,i)=>`Row ${i+1}: ${r}`).join('\n')}`,wm);
+  }
+  else if(S.wsType==='sent_build'){
+    const rows=(v('c_rows')||'').split('\n').filter(Boolean);
+    prompt=base(v('c_title')||'ฝึกแต่งประโยค',v('c_instr'),
+      `5 ROWS — each: illustration (NO label) + scrambled words "/" + 2–3 blank lines
+${rows.map((r,i)=>{const[img,words]=(r+'|').split('|');return `Row ${i+1}: image of "${img.trim()}" | words: ${words?.trim()}`;}).join('\n')}`,wm);
+  }
+  else if(S.wsType==='add_list'||S.wsType==='sub_list'){
+    const probs=(v('c_problems')||'').split('\n').filter(Boolean);
+    const half=Math.ceil(probs.length/2);
+    prompt=`${IMG_DIRECTIVE}
+Educational math worksheet, "${v('c_title')}", A4 vertical, 300 DPI
+${SKIN}
+${HDR_PROMPT}
+MAIN TITLE: "${v('c_title')}" ${ribbonPrompt}
+INSTRUCTION: คำชี้แจง : ${v('c_instr')}
+MAIN STRUCTURE: 2 columns × ${half} rows — each: ① circle ② equation ③ empty answer box
+LEFT: ${probs.slice(0,half).map((p,i)=>`${i+1}.${p}`).join('  ')}
+RIGHT: ${probs.slice(half).map((p,i)=>`${i+half+1}.${p}`).join('  ')}
+STRICT NEGATIVE: no pre-filled answers${wm?'\nwatermark: '+wm:''}`;
+  }
+  else if(S.wsType==='add_branch'){
+    const boxes=(v('c_boxes')||'').split('\n').filter(Boolean);
+    prompt=`${IMG_DIRECTIVE}
+Educational math worksheet, "${v('c_title')}", branch arrow style, A4 vertical, 300 DPI
+${SKIN}
+${HDR_PROMPT}
+MAIN TITLE: "${v('c_title')}" ${ribbonPrompt}
+INSTRUCTION: คำชี้แจง : ${v('c_instr')}
+4 BOXES in 2×2 grid — each: main number → 4 branch arrows → 4 empty boxes ⬜
+${boxes.map((b,i)=>{const[m,ns]=(b+':').split(':');return `BOX ${i+1}: ${m.trim()}+ → ${(ns||'3,5,4,2').split(',').map(n=>`→${n.trim()}=⬜`).join('  ')}`;}).join('\n')}
+STRICT NEGATIVE: no pre-filled, no crossed arrows${wm?'\nwatermark: '+wm:''}`;
+  }
+  else if(S.wsType==='add_card'||S.wsType==='sub_card'){
+    const probs=(v('c_problems')||'').split('\n').filter(Boolean);
+    prompt=`${IMG_DIRECTIVE}
+Educational math worksheet, "${v('c_title')}", card grid style, A4 vertical, 300 DPI
+${SKIN}
+${HDR_PROMPT}
+MAIN TITLE: "${v('c_title')}" ${ribbonPrompt}
+INSTRUCTION: คำชี้แจง : ${v('c_instr')||'เติมคำตอบให้ถูกต้อง'}
+3×3 = 9 rounded cards, each: number circle + vertical equation + empty answer box
+${probs.map((p,i)=>`Card ${i+1}: ${p}`).join('\n')||'auto-generate 9 problems'}
+STRICT NEGATIVE: no pre-filled${wm?'\nwatermark: '+wm:''}`;
+  }
+  else if(S.wsType==='compare_grid'){
+    const probs=(v('c_problems')||'').split('\n').filter(Boolean).map(p=>p.replace(' vs ',' ⬜ '));
+    prompt=`${IMG_DIRECTIVE}
+Educational math worksheet, "${v('c_title')}", comparison grid, A4 vertical, 300 DPI
+${SKIN}
+${HDR_PROMPT}
+MAIN TITLE: "${v('c_title')}" ${ribbonPrompt}
+INSTRUCTION: คำชี้แจง : ${v('c_instr')}
+MAIN STRUCTURE: 2 columns × 8 rows = 16 problems — format: NUMBER ⬜ NUMBER
+LEFT: ${probs.slice(0,8).map((p,i)=>`${i+1}.${p}`).join('  ')}
+RIGHT: ${probs.slice(8).map((p,i)=>`${i+9}.${p}`).join('  ')}
+STRICT NEGATIVE: no pre-filled symbols${wm?'\nwatermark: '+wm:''}`;
+  }
+  else if(S.wsType==='trace_num'){
+    prompt=`${IMG_DIRECTIVE}
+Thai educational math worksheet, number tracing 0–9, A4 vertical, 300 DPI
+${SKIN}
+${HDR_PROMPT}
+TITLE: "${v('c_title')}" ${ribbonPrompt}
+TRACING: digits 0–9, ${v('c_repeat')||5} dotted slots each — NO solid reference digits
+STRICT NEGATIVE: no solid digits, no color fill${wm?'\nwatermark: '+wm:''}`;
+  }
+  else if(S.wsType==='count_obj'){
+    prompt=base(v('c_title')||'นับแล้วเขียนจำนวน',v('c_instr'),
+      `Multiple rows: cute illustrated objects + empty number box
+Student counts → writes in box
+NO pre-filled numbers`,wm);
+  }
+  else if(S.wsType==='eng_tracing_full'){
+    const caseType=v('c_case')||'both';
+    const frameTheme=v('c_frame_theme')||'';
+    const isBoth=caseType==='both';
+    const isUpper=caseType==='upper';
+
+    // Grid layout: 26 letters in 5 cols × 5 rows + last row 1 centered = like reference image
+    const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const letterDisplay = isBoth
+      ? letters.map(l=>`${l}${l.toLowerCase()}`).join(', ')
+      : isUpper
+        ? letters.join(', ')
+        : letters.map(l=>l.toLowerCase()).join(', ');
+
+    prompt=`${IMG_DIRECTIVE}
+Educational English alphabet tracing worksheet, ALL 26 letters A–Z, vertical A4 (210mm × 297mm), 300 DPI.
+==================================================
+OVERALL STYLE
+Black and white LINE ART only — NO color fills, NO shading, NO gradients
+Suitable for coloring + tracing practice
+Clean professional educational infographic style
+==================================================
+OUTER FRAME / DECORATION
+${frameTheme ? `Outer decorative frame theme: "${frameTheme}" — cute black and white line art characters and elements around the outer border` : `Outer decorative frame: ${T.d} — black and white cute line art, coloring book style`}
+Characters/decorations sit OUTSIDE the letter grid, framing the page
+Bottom corners and sides: cute decorative illustrations (line art, no fill)
+==================================================
+TOP TITLE AREA
+Title: "The Alphabet" or "A–Z Alphabet Trace"
+Style: cute font inside a banner/arch shape at top
+==================================================
+MAIN LETTER GRID (CRITICAL — MUST BE COMPACT AND COMPLETE)
+Layout: 5 columns × 5 rows = 25 boxes, then final row = 1 box centered (Y Z)
+Total: 26 letter boxes covering ALL letters A to Z — NO letter may be missing
+Grid arrangement:
+  Row 1: ${isBoth?'Aa, Bb, Cc, Dd, Ee, Ff':isUpper?'A, B, C, D, E, F':'a, b, c, d, e, f'}
+  Row 2: ${isBoth?'Gg, Hh, Ii, Jj, Kk, Ll':isUpper?'G, H, I, J, K, L':'g, h, i, j, k, l'}
+  Row 3: ${isBoth?'Mm, Nn, Oo, Pp, Qq, Rr':isUpper?'M, N, O, P, Q, R':'m, n, o, p, q, r'}
+  Row 4: ${isBoth?'Ss, Tt, Uu, Vv, Ww, Xx':isUpper?'S, T, U, V, W, X':'s, t, u, v, w, x'}
+  Row 5 (last, 2 centered): ${isBoth?'Yy, Zz':isUpper?'Y, Z':'y, z'}
+
+Each box style:
+- Rounded square tile, thick black outline
+- Letter(s) inside as DOTTED TRACING lines (NOT solid black)
+- Dotted font: light grey dots forming letter shape
+- Font size: SMALL enough to fit all 26 letters on ONE A4 page (approx 14–16mm per box)
+- ${isBoth?'Uppercase + lowercase pair shown together in each box (e.g. "Aa")':'Single letter per box'}
+- Box background: white/light cream
+==================================================
+BOTTOM AREA
+Cute line art illustrations (coloring book style, no fill) in bottom corners
+Can include cute animal characters, plants, or theme elements
+"The Alphabet" label near door/bottom if space allows
+==================================================
+STRICT NEGATIVE
+- NO color fills anywhere
+- NO solid black letter fills (all letters must be dotted/tracing style)
+- NO missing letters — all 26 must appear
+- Letter boxes must be SMALL and COMPACT — not oversized
+- NO realistic style
+${wm?'- footer watermark: "'+wm+'"':''}`;
+  }
+  else if(S.wsType==='missing_az'){
+    const title=v('c_title')||'A-Z จงเติมตัวอักษรที่หายไป';
+    const instr=v('c_instr')||'จงเติมตัวอักษร A-Z ที่หายไปให้ครบถ้วน';
+    const shape=v('c_shape')||'apple';
+    const givenStr=v('c_given')||'a,c,d,g,j,l,n,p,s,t,v,x';
+    const caseM=v('c_case_missing')||'lower';
+    const givenLetters=givenStr.split(',').map(x=>x.trim().toUpperCase());
+    const allLetters='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const layout=allLetters.map(l=>{
+      const isGiven=givenLetters.includes(l);
+      const display=caseM==='lower'?l.toLowerCase():l;
+      return isGiven?`[${display}]`:`[___]`;
+    });
+    // Build rows of 5
+    const rows=[];
+    for(let i=0;i<26;i+=5) rows.push(layout.slice(i,i+5).join(' '));
+    const shapeDesc={
+      apple:'cute apple shape with stem and leaf, thick outline, coloring book style line art',
+      rounded:'rounded square tile with thick border, slight shadow',
+      star:'cute star shape, 5-pointed, thick outline',
+      cloud:'fluffy cloud shape, cute, thick outline',
+      heart:'heart shape, cute, thick outline',
+    }[shape]||'cute rounded shape';
+
+    prompt=`${IMG_DIRECTIVE}
+Cute premium educational English worksheet "Fill in the Missing Letters A-Z", vertical A4 (210mm × 297mm), 300 DPI.
+==================================================
+MASTER STYLE
+${T.s}
+==================================================
+DECORATIVE ENHANCEMENT (OUTER BORDER ONLY)
+Border theme: ${T.d}
+Background: ${T.b}
+Extra elements: ${T.e}
+ALL decorations on OUTER EDGES only — center must stay clean for writing
+==================================================
+TOP HEADER (STUDENT INFO)
+rounded rectangular box: ชื่อ _____________ นามสกุล _____________ ชั้น _______ เลขที่ _______
+top right: score circle badge "คะแนน"
+==================================================
+TITLE BANNER
+${ribbonPrompt}
+Large curved title: "${title}"
+==================================================
+INSTRUCTION BOX
+Rounded cream box with pencil icon:
+คำชี้แจง : ${instr}
+==================================================
+MAIN ACTIVITY — 26 LETTER SHAPES IN GRID (5 columns × rows)
+Shape style: ${shapeDesc}
+Each shape contains either a letter OR a blank line (for student to write)
+Grid layout (5 per row):
+${rows.join('\n')}
+Legend: [letter] = shown | [___] = blank line for student to fill in
+
+IMPORTANT RULES:
+- Each shape must be clearly visible and same size
+- Letters shown: bold, clearly readable font (${caseM==='lower'?'lowercase':'uppercase'})
+- Blank shapes: have a short underline "_____" at the bottom inside the shape
+- No answers pre-filled in blank shapes
+==================================================
+BOTTOM DECORATION
+Cute pencil/crayon illustration at bottom corner
+${wm?'- watermark: "'+wm+'"':''}
+==================================================
+STRICT NEGATIVE
+- No pre-filled answers in blank shapes
+- No realistic photo style`;
+  }
+
+  // ── DISPLAY OUTPUT ──
+  S.prompt=prompt;
+  document.getElementById('ph').style.display='none';
+  const po=document.getElementById('po');
+  po.style.display='block';
+  po.textContent=prompt;
+
+  document.getElementById('outst').textContent='✅ พร้อมใช้งาน';
+  document.getElementById('cc2').textContent=prompt.length.toLocaleString()+' chars';
+
+  const allT=Object.values(WS_TYPES).flat();
+  const t=allT.find(x=>x.id===S.wsType);
+  const tn=THEMES.find(x=>x.id===S.theme)?.name;
+  document.getElementById('ftgs').innerHTML=[
+    S.subj?`<span class="ftg">${SUBJS.find(x=>x.id===S.subj)?.label}</span>`:'',
+    t?`<span class="ftg">${t.name}</span>`:'',
+    tn?`<span class="ftg">${S.isAuto?'✨ Auto: ':''}${tn}</span>`:'',
+    `<span class="ftg">🔒 Core locked</span>`,
+  ].join('');
+
+  // Show quick copy bar
+  document.getElementById('qcopy').classList.add('show');
+
+  // Scroll output to top
+  document.querySelector('.ob').scrollTop=0;
+
+  showToast('✅ สร้าง Prompt สำเร็จแล้ว! กด คัดลอก เพื่อนำไปใช้','ok');
+}
+
+// ============================================================
+// COPY / DOWNLOAD
+// ============================================================
+function cpP(){
+  if(!S.prompt){showToast('กด "สร้าง Prompt" ก่อนครับ ⚠️','err');return;}
+  const btn=document.getElementById('cpbtn');
+  const qbtn=document.querySelector('.qcopy-btn');
+
+  function onSuccess(){
+    btn.textContent='✓ คัดลอกแล้ว!';
+    btn.classList.add('success');
+    if(qbtn){qbtn.textContent='✓ คัดลอกแล้ว!';}
+    showToast('📋 คัดลอก Prompt แล้ว! นำไปวางใน AI ได้เลยครับ','ok');
+    setTimeout(()=>{
+      btn.textContent='📋 คัดลอก';
+      btn.classList.remove('success');
+      if(qbtn) qbtn.textContent='📋 คัดลอก Prompt';
+    },2500);
+  }
+
+  function onFail(){
+    btn.textContent='⚠️ ล้มเหลว';
+    btn.classList.add('error');
+    showToast('❌ คัดลอกไม่ได้ — กด "⬇ บันทึก .txt" แทนครับ','err',4000);
+    setTimeout(()=>{btn.textContent='📋 คัดลอก';btn.classList.remove('error');},3000);
+  }
+
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(S.prompt).then(onSuccess).catch(()=>{
+      // fallback
+      const ta=document.createElement('textarea');
+      ta.value=S.prompt; ta.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try{document.execCommand('copy')?onSuccess():onFail();}catch{onFail();}
+      document.body.removeChild(ta);
+    });
+  } else {
+    const ta=document.createElement('textarea');
+    ta.value=S.prompt; ta.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try{document.execCommand('copy')?onSuccess():onFail();}catch{onFail();}
+    document.body.removeChild(ta);
+  }
+}
+
+function dlP(){
+  if(!S.prompt){showToast('กด "สร้าง Prompt" ก่อนครับ ⚠️','err');return;}
+  const blob=new Blob([S.prompt],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`prompt_${S.subj||'thai'}_${S.wsType||'ws'}_${Date.now()}.txt`;
+  a.click();
+  showToast('⬇️ บันทึกไฟล์แล้วครับ','ok');
+}
+
+// ── INIT ──
+init();
+</script>
+</body>
+</html>
